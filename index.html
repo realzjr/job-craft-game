@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>岗位合成器 - 办公室炼金术</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f0f4f8;
+  min-height: 100vh;
+  color: #2d3748;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 30px 0 20px;
+}
+.header h1 {
+  font-size: 2em;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+.header .subtitle {
+  color: #718096;
+  font-size: 0.95em;
+}
+
+/* Progress */
+.progress-bar {
+  background: #e2e8f0;
+  border-radius: 20px;
+  height: 28px;
+  margin: 16px 0 24px;
+  position: relative;
+  overflow: hidden;
+}
+.progress-fill {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.5s ease;
+  min-width: 0;
+}
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+/* Items Grid */
+.section-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #4a5568;
+}
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.item-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 6px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85em;
+  color: #4a5568;
+  user-select: none;
+}
+.item-btn:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+.item-btn:active {
+  transform: translateY(0);
+}
+.item-btn .emoji {
+  font-size: 2em;
+  line-height: 1;
+}
+.item-btn.selected-highlight {
+  border-color: #667eea;
+  background: #ebf4ff;
+}
+
+/* Workbench */
+.workbench {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.workbench-title {
+  font-size: 1em;
+  font-weight: 600;
+  color: #718096;
+  margin-bottom: 12px;
+}
+.slots-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.slot {
+  width: 80px;
+  height: 80px;
+  border: 2px dashed #cbd5e0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  color: #a0aec0;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  background: #f7fafc;
+}
+.slot.filled {
+  border-style: solid;
+  border-color: #667eea;
+  background: #ebf4ff;
+  color: #4a5568;
+}
+.slot.filled:hover {
+  background: #fee2e2;
+  border-color: #fc8181;
+}
+.slot .emoji { font-size: 1.8em; line-height: 1; }
+.slot .remove-hint {
+  display: none;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  background: #fc8181;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+}
+.slot.filled:hover .remove-hint { display: block; }
+.plus-sign {
+  font-size: 1.5em;
+  color: #cbd5e0;
+  font-weight: 300;
+}
+.btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.craft-btn {
+  padding: 10px 36px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.05em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.craft-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+.craft-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.clear-btn {
+  padding: 10px 20px;
+  background: #edf2f7;
+  color: #718096;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.clear-btn:hover { background: #e2e8f0; }
+
+/* Result popup */
+.result-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s;
+}
+.result-overlay.show { display: flex; }
+.result-card {
+  background: white;
+  border-radius: 20px;
+  padding: 36px 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  animation: popIn 0.4s ease;
+}
+.result-card.fail { }
+.result-card .result-emoji { font-size: 3.5em; margin-bottom: 12px; }
+.result-card .result-title { font-size: 1.5em; font-weight: 700; margin-bottom: 8px; color: #2d3748; }
+.result-card .result-formula { font-size: 1em; color: #718096; margin-bottom: 8px; }
+.result-card .result-desc { font-size: 0.95em; color: #4a5568; line-height: 1.6; margin-bottom: 20px; }
+.result-card .result-new { color: #48bb78; font-weight: 600; font-size: 0.9em; margin-bottom: 16px; }
+.result-card .result-dup { color: #ed8936; font-weight: 600; font-size: 0.9em; margin-bottom: 16px; }
+.result-card button {
+  padding: 10px 30px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1em;
+  cursor: pointer;
+}
+.fail-text { color: #e53e3e; font-size: 1.1em; font-weight: 600; margin-bottom: 8px; }
+.fail-hint { color: #718096; font-size: 0.9em; margin-bottom: 20px; }
+
+/* Collection */
+.collection {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  margin-bottom: 30px;
+}
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.job-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.job-card:hover {
+  background: #ebf4ff;
+  border-color: #667eea;
+}
+.job-card .job-emoji { font-size: 1.5em; }
+.job-card .job-name { font-weight: 600; font-size: 0.95em; margin-top: 4px; }
+.job-card .job-formula-mini { font-size: 0.75em; color: #a0aec0; margin-top: 2px; }
+.job-card-unknown {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7fafc;
+  border: 1px dashed #cbd5e0;
+  text-align: center;
+  color: #cbd5e0;
+  font-size: 1.5em;
+}
+/* Detail overlay */
+.detail-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.detail-overlay.show { display: flex; }
+.detail-card {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  animation: popIn 0.3s ease;
+}
+.detail-card .result-emoji { font-size: 3em; margin-bottom: 8px; }
+.detail-card .result-title { font-size: 1.4em; font-weight: 700; margin-bottom: 6px; }
+.detail-card .result-formula { color: #718096; margin-bottom: 8px; }
+.detail-card .result-desc { color: #4a5568; line-height: 1.6; margin-bottom: 18px; }
+.detail-card button {
+  padding: 8px 24px;
+  background: #edf2f7;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #4a5568;
+}
+
+/* Hint area */
+.hint-area {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.hint-btn {
+  padding: 8px 20px;
+  background: #fefcbf;
+  border: 1px solid #ecc94b;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: #744210;
+  transition: all 0.2s;
+}
+.hint-btn:hover { background: #fef3c7; }
+.hint-text {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #975a16;
+  background: #fefcbf;
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: none;
+}
+.hint-text.show { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Responsive */
+@media (max-width: 500px) {
+  .items-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .item-btn { padding: 10px 4px; font-size: 0.78em; }
+  .item-btn .emoji { font-size: 1.6em; }
+  .slot { width: 68px; height: 68px; }
+  .collection-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>岗位合成器</h1>
+    <div class="subtitle">用办公室物品合成各种岗位，发现职场真相！</div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    <div class="progress-text" id="progressText">已解锁 0 / 0 个岗位</div>
+  </div>
+
+  <!-- Items -->
+  <div class="section-title">📦 材料库</div>
+  <div class="items-grid" id="itemsGrid"></div>
+
+  <!-- Workbench -->
+  <div class="workbench">
+    <div class="workbench-title">🔧 合成台（选择 2~3 个材料）</div>
+    <div class="slots-row" id="slotsRow">
+      <div class="slot" id="slot0" onclick="removeSlot(0)"><span style="font-size:1.5em">①</span></div>
+      <div class="plus-sign">+</div>
+      <div class="slot" id="slot1" onclick="removeSlot(1)"><span style="font-size:1.5em">②</span></div>
+      <div class="plus-sign" id="plus2">+</div>
+      <div class="slot" id="slot2" onclick="removeSlot(2)"><span style="font-size:1.5em">③</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="clear-btn" onclick="clearSlots()">清空</button>
+      <button class="craft-btn" id="craftBtn" onclick="craft()" disabled>合成！</button>
+    </div>
+  </div>
+
+  <!-- Hint -->
+  <div class="hint-area">
+    <button class="hint-btn" onclick="showHint()">💡 给个提示</button>
+    <div class="hint-text" id="hintText"></div>
+  </div>
+
+  <!-- Collection -->
+  <div class="collection">
+    <div class="section-title">🏆 岗位图鉴 <span id="collCount"></span></div>
+    <div class="collection-grid" id="collectionGrid"></div>
+  </div>
+</div>
+
+<!-- Result Overlay -->
+<div class="result-overlay" id="resultOverlay" onclick="closeResult(event)">
+  <div class="result-card" id="resultCard"></div>
+</div>
+
+<!-- Detail Overlay -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="detail-card" id="detailCard"></div>
+</div>
+
+<script>
+// === DATA ===
+const ITEMS = [
+  { id: 'abacus',  emoji: '🧮', name: '算盘' },
+  { id: 'pot',     emoji: '🍳', name: '锅' },
+  { id: 'keyboard',emoji: '⌨️', name: '键盘' },
+  { id: 'coffee',  emoji: '☕', name: '咖啡' },
+  { id: 'phone',   emoji: '📞', name: '电话' },
+  { id: 'tie',     emoji: '👔', name: '领带' },
+  { id: 'stamp',   emoji: '🔏', name: '印章' },
+  { id: 'note',    emoji: '📝', name: '便利贴' },
+  { id: 'scissors',emoji: '✂️', name: '剪刀' },
+  { id: 'magnify', emoji: '🔍', name: '放大镜' },
+  { id: 'key',     emoji: '🔑', name: '钥匙' },
+  { id: 'clock',   emoji: '⏰', name: '闹钟' },
+  { id: 'mask',    emoji: '🎭', name: '面具' },
+  { id: 'bug',     emoji: '🐛', name: '虫子' },
+  { id: 'pie',     emoji: '🥧', name: '饼' },
+  { id: 'horn',    emoji: '📢', name: '喇叭' },
+  { id: 'calendar',emoji: '📅', name: '日历' },
+  { id: 'pillow',  emoji: '🛏️', name: '枕头' },
+  { id: 'shield',  emoji: '🛡️', name: '盾牌' },
+  { id: 'broom',   emoji: '🧹', name: '扫帚' },
+];
+
+const itemMap = {};
+ITEMS.forEach(it => itemMap[it.id] = it);
+
+const RECIPES = [
+  {
+    inputs: ['abacus', 'pot'],
+    job: '会计',
+    emoji: '🧑‍💼',
+    desc: '能算账，更能背锅。\n数字算得清清楚楚，黑锅背得明明白白。'
+  },
+  {
+    inputs: ['keyboard', 'coffee', 'bug'],
+    job: '程序员',
+    emoji: '👨‍💻',
+    desc: '靠咖啡续命，与Bug共生。\n改一个Bug，生三个Bug，生生不息。'
+  },
+  {
+    inputs: ['scissors', 'mask'],
+    job: 'HR',
+    emoji: '🤵',
+    desc: '微笑着递上裁员通知书。\n面带微笑是职业素养，手持剪刀是业务需要。'
+  },
+  {
+    inputs: ['tie', 'pie'],
+    job: 'CEO',
+    emoji: '🤴',
+    desc: '西装革履，专业画饼三十年。\n今天的饼虽然大，但明天的会更大！'
+  },
+  {
+    inputs: ['note', 'pie'],
+    job: '产品经理',
+    emoji: '📋',
+    desc: '需求贴满墙，交付靠画饼。\n这个需求很简单，怎么实现我不管。'
+  },
+  {
+    inputs: ['magnify', 'scissors'],
+    job: '法务',
+    emoji: '⚖️',
+    desc: '拿放大镜找合同漏洞，拿剪刀裁掉法律风险。\n每个字都是证据，每个逗号都是武器。'
+  },
+  {
+    inputs: ['phone', 'horn'],
+    job: '销售',
+    emoji: '📣',
+    desc: '左手电话右手喇叭，能打能吆喝。\n只要脸皮够厚，全世界都是客户。'
+  },
+  {
+    inputs: ['key', 'clock'],
+    job: '保安大叔',
+    emoji: '💂',
+    desc: '管着全楼的钥匙，定点巡逻风雨无阻。\n你上班他在，你下班他还在。'
+  },
+  {
+    inputs: ['magnify', 'bug'],
+    job: '测试工程师',
+    emoji: '🔬',
+    desc: '拿着放大镜，专业捉虫二十年。\n开发说"在我电脑上是好的"，测试说"但在我这不行"。'
+  },
+  {
+    inputs: ['key', 'coffee', 'clock'],
+    job: '运维工程师',
+    emoji: '🔧',
+    desc: '凌晨三点被闹醒，灌口咖啡去救火。\n服务器比女朋友重要，因为它真的会在半夜找你。'
+  },
+  {
+    inputs: ['magnify', 'abacus'],
+    job: '审计',
+    emoji: '🕵️',
+    desc: '一手放大镜一手算盘，谁也别想蒙混过关。\n三年前的一毛钱差额，也能给你翻出来。'
+  },
+  {
+    inputs: ['clock', 'horn', 'note'],
+    job: '项目经理',
+    emoji: '🗓️',
+    desc: '催催催！DDL贴满墙，喇叭喊到嗓子哑。\n什么都不会，但什么都能催。'
+  },
+  {
+    inputs: ['horn', 'mask'],
+    job: '市场营销',
+    emoji: '🎪',
+    desc: '包装一下，大声吆喝，把稻草卖出黄金价。\n不是产品不行，是你不懂欣赏。'
+  },
+  {
+    inputs: ['coffee', 'phone', 'note'],
+    job: '行政秘书',
+    emoji: '💁',
+    desc: '泡咖啡、接电话、记行程，三位一体。\n老板的日程比自己的命还重要。'
+  },
+  {
+    inputs: ['tie', 'stamp'],
+    job: '领导',
+    emoji: '👑',
+    desc: '穿得体面，负责盖章。\n开会举手同意，签字一挥而就，其他的不归我管。'
+  },
+  {
+    inputs: ['keyboard', 'bug', 'shield'],
+    job: '网络安全工程师',
+    emoji: '🛡️',
+    desc: '键盘是武器，盾牌是信仰，虫子是敌人。\n别人写代码，我找代码的漏洞。'
+  },
+  {
+    inputs: ['pillow', 'keyboard'],
+    job: '自由职业者',
+    emoji: '🏖️',
+    desc: '枕头旁边放键盘，醒了就是上班。\n没有通勤烦恼，也没有下班时间。'
+  },
+  {
+    inputs: ['broom', 'key'],
+    job: '物业管家',
+    emoji: '🧹',
+    desc: '扫帚扫天下，钥匙开万门。\n业主的问题千千万，物业的回答就一个：已登记。'
+  },
+  {
+    inputs: ['calendar', 'scissors'],
+    job: '裁员专家',
+    emoji: '📉',
+    desc: '翻着日历算日子，拿着剪刀裁人头。\n优化、毕业、人员调整——花式说再见。'
+  },
+  {
+    inputs: ['coffee', 'pillow'],
+    job: '实习生',
+    emoji: '🐣',
+    desc: '困了喝咖啡，累了想睡觉。\n钱少活多离家远，但简历上能写一行字。'
+  },
+  {
+    inputs: ['abacus', 'stamp'],
+    job: '财务总监',
+    emoji: '💰',
+    desc: '算完账盖个章，公司的钱就这么花了。\n签字的笔比算盘还重。'
+  },
+  {
+    inputs: ['phone', 'mask', 'note'],
+    job: '客服',
+    emoji: '🎧',
+    desc: '电话响不停，微笑看不见，记录本写满。\n"您的问题我已记录，请耐心等待。"'
+  },
+  {
+    inputs: ['magnify', 'keyboard'],
+    job: 'Code Reviewer',
+    emoji: '🧐',
+    desc: '拿着放大镜看你每一行代码。\n"这里为什么不用const？" "这个变量名不够语义化。"'
+  },
+  {
+    inputs: ['pie', 'horn', 'tie'],
+    job: '投资人',
+    emoji: '🦈',
+    desc: '画的饼比CEO还大，喊得比销售还响，穿得比领导还正。\n"赛道很好，但我们再看看。"'
+  },
+  {
+    inputs: ['clock', 'coffee', 'calendar'],
+    job: '打工人',
+    emoji: '🫠',
+    desc: '闹钟叫醒肉体，咖啡唤醒灵魂，日历提醒你还没到周五。\n工作使我快乐（大雾）。'
+  },
+];
+
+// Normalize recipe keys
+RECIPES.forEach(r => {
+  r.key = [...r.inputs].sort().join('+');
+});
+
+// Build recipe lookup
+const recipeLookup = {};
+RECIPES.forEach(r => { recipeLookup[r.key] = r; });
+
+// === STATE ===
+let slots = [null, null, null]; // item ids
+let discovered = JSON.parse(localStorage.getItem('jobcraft_discovered') || '[]');
+
+// === RENDER ===
+function renderItems() {
+  const grid = document.getElementById('itemsGrid');
+  grid.innerHTML = '';
+  ITEMS.forEach(item => {
+    const btn = document.createElement('div');
+    btn.className = 'item-btn';
+    btn.id = 'item_' + item.id;
+    btn.innerHTML = `<span class="emoji">${item.emoji}</span>${item.name}`;
+    btn.onclick = () => addToSlot(item.id);
+    grid.appendChild(btn);
+  });
+}
+
+function renderSlots() {
+  for (let i = 0; i < 3; i++) {
+    const el = document.getElementById('slot' + i);
+    if (slots[i]) {
+      const item = itemMap[slots[i]];
+      el.className = 'slot filled';
+      el.innerHTML = `<span class="emoji">${item.emoji}</span><span>${item.name}</span><span class="remove-hint">×</span>`;
+    } else {
+      el.className = 'slot';
+      el.innerHTML = `<span style="font-size:1.5em">${['①','②','③'][i]}</span>`;
+    }
+  }
+  // Highlight items in grid
+  ITEMS.forEach(item => {
+    const el = document.getElementById('item_' + item.id);
+    if (el) el.classList.toggle('selected-highlight', slots.includes(item.id));
+  });
+  // Enable craft button
+  const count = slots.filter(Boolean).length;
+  document.getElementById('craftBtn').disabled = count < 2;
+}
+
+function renderProgress() {
+  const total = RECIPES.length;
+  const found = discovered.length;
+  const pct = total > 0 ? (found / total * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `已解锁 ${found} / ${total} 个岗位`;
+}
+
+function renderCollection() {
+  const grid = document.getElementById('collectionGrid');
+  grid.innerHTML = '';
+  RECIPES.forEach(r => {
+    if (discovered.includes(r.key)) {
+      const card = document.createElement('div');
+      card.className = 'job-card';
+      const formulaMini = r.inputs.map(id => itemMap[id].emoji).join(' + ');
+      card.innerHTML = `<span class="job-emoji">${r.emoji}</span>
+        <div class="job-name">${r.job}</div>
+        <div class="job-formula-mini">${formulaMini}</div>`;
+      card.onclick = () => showDetail(r);
+      grid.appendChild(card);
+    } else {
+      const card = document.createElement('div');
+      card.className = 'job-card-unknown';
+      card.innerHTML = '❓';
+      grid.appendChild(card);
+    }
+  });
+  document.getElementById('collCount').textContent = '';
+}
+
+// === ACTIONS ===
+function addToSlot(itemId) {
+  // Find first empty slot
+  for (let i = 0; i < 3; i++) {
+    if (slots[i] === null) {
+      slots[i] = itemId;
+      renderSlots();
+      return;
+    }
+  }
+  // All full, do nothing
+}
+
+function removeSlot(i) {
+  if (slots[i]) {
+    slots[i] = null;
+    // Compact: move items left
+    const filled = slots.filter(Boolean);
+    slots = [filled[0] || null, filled[1] || null, filled[2] || null];
+    renderSlots();
+  }
+}
+
+function clearSlots() {
+  slots = [null, null, null];
+  renderSlots();
+  // Also hide hint
+  document.getElementById('hintText').classList.remove('show');
+}
+
+function craft() {
+  const used = slots.filter(Boolean);
+  if (used.length < 2) return;
+
+  const key = [...used].sort().join('+');
+  const recipe = recipeLookup[key];
+
+  const overlay = document.getElementById('resultOverlay');
+  const card = document.getElementById('resultCard');
+
+  if (recipe) {
+    const isNew = !discovered.includes(key);
+    if (isNew) {
+      discovered.push(key);
+      localStorage.setItem('jobcraft_discovered', JSON.stringify(discovered));
+    }
+    const formula = recipe.inputs.map(id => `${itemMap[id].emoji}${itemMap[id].name}`).join(' + ');
+    card.innerHTML = `
+      <div class="result-emoji">${recipe.emoji}</div>
+      <div class="result-title">${recipe.job}</div>
+      <div class="result-formula">${formula}</div>
+      <div class="${isNew ? 'result-new' : 'result-dup'}">${isNew ? '🎉 新岗位解锁！' : '✅ 已解锁过'}</div>
+      <div class="result-desc">${recipe.desc.replace(/\n/g, '<br>')}</div>
+      <button onclick="closeResultBtn()">继续合成</button>
+    `;
+    renderProgress();
+    renderCollection();
+  } else {
+    const usedEmojis = used.map(id => itemMap[id].emoji).join(' + ');
+    const fails = [
+      '这几样东西放在一起……什么也没发生。',
+      '合成失败！也许换个组合试试？',
+      '嗯……这个组合暂时合成不了任何岗位。',
+      '叮——合成炉冒了一阵烟，什么都没出来。',
+      '这些物品面面相觑，拒绝合体。',
+    ];
+    const failMsg = fails[Math.floor(Math.random() * fails.length)];
+    card.innerHTML = `
+      <div class="result-emoji">💨</div>
+      <div class="fail-text">合成失败</div>
+      <div class="result-formula">${usedEmojis}</div>
+      <div class="fail-hint">${failMsg}</div>
+      <button onclick="closeResultBtn()">再试试</button>
+    `;
+  }
+
+  overlay.classList.add('show');
+  slots = [null, null, null];
+  renderSlots();
+}
+
+function closeResult(e) {
+  if (e.target === document.getElementById('resultOverlay')) {
+    document.getElementById('resultOverlay').classList.remove('show');
+  }
+}
+function closeResultBtn() {
+  document.getElementById('resultOverlay').classList.remove('show');
+}
+
+function showDetail(recipe) {
+  const overlay = document.getElementById('detailOverlay');
+  const card = document.getElementById('detailCard');
+  const formula = recipe.inputs.map(id => `${itemMap[id].emoji}${itemMap[id].name}`).join(' + ');
+  card.innerHTML = `
+    <div class="result-emoji">${recipe.emoji}</div>
+    <div class="result-title">${recipe.job}</div>
+    <div class="result-formula">${formula}</div>
+    <div class="result-desc">${recipe.desc.replace(/\n/g, '<br>')}</div>
+    <button onclick="closeDetailBtn()">关闭</button>
+  `;
+  overlay.classList.add('show');
+}
+function closeDetail(e) {
+  if (e.target === document.getElementById('detailOverlay')) {
+    document.getElementById('detailOverlay').classList.remove('show');
+  }
+}
+function closeDetailBtn() {
+  document.getElementById('detailOverlay').classList.remove('show');
+}
+
+// Hint system
+function showHint() {
+  const undiscovered = RECIPES.filter(r => !discovered.includes(r.key));
+  const hintEl = document.getElementById('hintText');
+  if (undiscovered.length === 0) {
+    hintEl.textContent = '🎊 你已经解锁了所有岗位！太厉害了！';
+    hintEl.classList.add('show');
+    return;
+  }
+  const recipe = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+  // Show partial hint
+  const hints = [
+    `试试把 ${itemMap[recipe.inputs[0]].emoji}${itemMap[recipe.inputs[0]].name} 和其他东西组合看看……`,
+    `${recipe.job}需要 ${recipe.inputs.length} 样材料，其中有 ${itemMap[recipe.inputs[recipe.inputs.length - 1]].emoji}……`,
+    `想想什么岗位和 ${itemMap[recipe.inputs[0]].emoji} 有关？`,
+    `有个岗位叫「${recipe.job}」，猜猜需要什么材料？`,
+  ];
+  hintEl.textContent = '💡 ' + hints[Math.floor(Math.random() * hints.length)];
+  hintEl.classList.add('show');
+}
+
+// === INIT ===
+renderItems();
+renderSlots();
+renderProgress();
+renderCollection();
+</script>
+</body>
+</html>
