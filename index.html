@@ -135,7 +135,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;backgroun
 .item-card{position:absolute;width:60px;height:60px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:all .25s;user-select:none;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);backdrop-filter:blur(6px);z-index:2}
 .item-card:active{transform:scale(.9)!important}
 .item-card .item-emoji{font-size:1.6em;line-height:1}
-.item-card .item-name{font-size:.6em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-weight:600;max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-card .item-name{font-size:.6em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-weight:600;max-width:calc(100% - 6px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Hidden */
 .item-card.hidden-item{background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.08);backdrop-filter:blur(3px)}
@@ -198,6 +198,8 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;backgroun
 .edit-bar button{padding:3px 10px;border:none;border-radius:6px;background:#fff;color:#7c3aed;font-size:.9em;cursor:pointer}
 body.editing .room-nav{margin-top:30px}
 body.editing .item-card{cursor:grab;touch-action:none}
+.item-card .rz{display:none}
+body.editing .item-card .rz{display:block;position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;background:#7c3aed;border:2px solid #fff;border-radius:4px;cursor:nwse-resize;touch-action:none;z-index:3}
 .export-ta{width:100%;height:180px;background:#0f172a;color:#a5b4fc;border:1px solid #475569;border-radius:8px;font-size:.65em;font-family:monospace;padding:8px;margin-bottom:10px}
 
 /* ===== COMPANY MAP ===== */
@@ -370,22 +372,31 @@ function renderRoom(){
   html+=`<div class="scene-bg ${room.scene||room.id}"></div>`;
   html+=(ROOM_DECOS[room.id]||'');
   items.forEach(it=>{
-    const style=`top:${it.y}%;left:${it.x}%`;
+    const style=`top:${it.y}%;left:${it.x}%`+(it.w?`;width:${it.w}px`:'')+(it.h?`;height:${it.h}px`:'');
+    const ef=(it.w||it.h)?` style="font-size:${(1.6*Math.min(it.w||60,it.h||60)/60).toFixed(2)}em"`:'';
     if(EDIT){
-      html+=`<div class="item-card revealed${it.isSynth?' synth-item':''}" data-id="${it.id}" style="${style}"><span class="item-emoji">${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+      html+=`<div class="item-card revealed${it.isSynth?' synth-item':''}" data-id="${it.id}" style="${style}"><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span><span class="rz"></span></div>`;
     }else if(it.isSynth){
       const sel=S.slots.includes(it.id)?'selected':'';
-      html+=`<div class="item-card revealed synth-item ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji">${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+      html+=`<div class="item-card revealed synth-item ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
     }else if(!isRevealed(it.id)){
-      html+=`<div class="item-card hidden-item" style="${style}" onclick="revealItem('${it.id}',this)"><span class="discover-hint">❓</span><span class="item-emoji">${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+      html+=`<div class="item-card hidden-item" style="${style}" onclick="revealItem('${it.id}',this)"><span class="discover-hint">❓</span><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
     }else{
       const sel=S.slots.includes(it.id)?'selected':'';
-      html+=`<div class="item-card revealed ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji">${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+      html+=`<div class="item-card revealed ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
     }
   });
   html+=`</div>`;
   container.innerHTML=html;
-  if(EDIT)container.querySelectorAll('.item-card').forEach(el=>el.onpointerdown=e=>editDrag(e,el));
+  if(EDIT)container.querySelectorAll('.item-card').forEach(el=>{
+    el.onpointerdown=e=>editDrag(e,el);
+    el.ondblclick=()=>{
+      const it=itemMap[el.dataset.id];if(!it)return;
+      delete it.w;delete it.h;
+      const r=ITEM_RECIPES.find(x=>x.result===it.id);if(r){delete r.w;delete r.h}
+      renderRoom();showToast(it.name+' 尺寸已重置');
+    };
+  });
 }
 
 function renderSlots(){
@@ -595,28 +606,47 @@ function editDrag(e,el){
   const scene=document.getElementById('roomScene');if(!scene)return;
   const rect=scene.getBoundingClientRect();
   const id=el.dataset.id;
+  const isResize=e.target.classList.contains('rz');
   el.setPointerCapture(e.pointerId);
+  const sx=e.clientX,sy=e.clientY,sw=el.offsetWidth,sh=el.offsetHeight;
   const move=ev=>{
-    let x=(ev.clientX-rect.left-el.offsetWidth/2)/rect.width*100;
-    let y=(ev.clientY-rect.top-el.offsetHeight/2)/rect.height*100;
-    x=Math.max(0,Math.min(100-el.offsetWidth/rect.width*100,x));
-    y=Math.max(0,Math.min(100-el.offsetHeight/rect.height*100,y));
-    el.style.left=x+'%';el.style.top=y+'%';
-    _drag={id,x:Math.round(x*10)/10,y:Math.round(y*10)/10};
+    if(isResize){
+      const w=Math.round(Math.max(36,Math.min(180,sw+ev.clientX-sx)));
+      const h=Math.round(Math.max(36,Math.min(180,sh+ev.clientY-sy)));
+      el.style.width=w+'px';el.style.height=h+'px';
+      const em=el.querySelector('.item-emoji');
+      if(em)em.style.fontSize=(1.6*Math.min(w,h)/60).toFixed(2)+'em';
+      _drag={id,w,h,resize:true};
+    }else{
+      let x=(ev.clientX-rect.left-el.offsetWidth/2)/rect.width*100;
+      let y=(ev.clientY-rect.top-el.offsetHeight/2)/rect.height*100;
+      x=Math.max(0,Math.min(100-el.offsetWidth/rect.width*100,x));
+      y=Math.max(0,Math.min(100-el.offsetHeight/rect.height*100,y));
+      el.style.left=x+'%';el.style.top=y+'%';
+      _drag={id,x:Math.round(x*10)/10,y:Math.round(y*10)/10};
+    }
   };
   const up=()=>{
     el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);
     if(_drag&&_drag.id===id){
-      const it=itemMap[id];it.x=_drag.x;it.y=_drag.y;
-      const r=ITEM_RECIPES.find(x=>x.result===id);if(r){r.x=_drag.x;r.y=_drag.y}
-      showToast(`${it.name} → x:${it.x} y:${it.y}`);
+      const it=itemMap[id];
+      const r=ITEM_RECIPES.find(x=>x.result===id);
+      if(_drag.resize){
+        it.w=_drag.w;it.h=_drag.h;
+        if(r){r.w=_drag.w;r.h=_drag.h}
+        showToast(`${it.name} → 宽:${it.w} 高:${it.h}`);
+      }else{
+        it.x=_drag.x;it.y=_drag.y;
+        if(r){r.x=_drag.x;r.y=_drag.y}
+        showToast(`${it.name} → x:${it.x} y:${it.y}`);
+      }
       _drag=null;
     }
   };
   el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
 }
 function editExport(){
-  const strip=r=>({a:r.a,b:r.b,result:r.result,emoji:r.emoji,name:r.name,desc:r.desc,room:r.room,x:r.x,y:r.y});
+  const strip=r=>({a:r.a,b:r.b,result:r.result,emoji:r.emoji,name:r.name,desc:r.desc,room:r.room,x:r.x,y:r.y,w:r.w,h:r.h});
   const out='// 拖动后的最新坐标，粘贴回 data.js 替换对应数组\nbaseItems:'+JSON.stringify(BASE_ITEMS)+',\n\nitemRecipes:'+JSON.stringify(ITEM_RECIPES.map(strip))+',';
   const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
   card.innerHTML=`<div class="p-title">导出坐标数据</div><div class="p-desc">包含拖动后的最新坐标，复制后替换 data.js 中的 baseItems / itemRecipes</div><textarea class="export-ta" id="exportTa"></textarea><button onclick="navigator.clipboard.writeText(document.getElementById('exportTa').value).then(()=>showToast('已复制'))">复制</button> <button onclick="closeOv()">关闭</button>`;
@@ -633,6 +663,8 @@ function validateData(){
     seen.add(i.id);
     if(!roomIds.has(i.room))errs.push(`物品 ${i.id} 所在房间 ${i.room} 不存在`);
     if(i.x<0||i.x>92||i.y<0||i.y>88)errs.push(`物品 ${i.id} 坐标可能越界 x:${i.x} y:${i.y}`);
+    if(i.w!=null&&(i.w<24||i.w>240))errs.push(`物品 ${i.id} 宽度异常: ${i.w}`);
+    if(i.h!=null&&(i.h<24||i.h>240))errs.push(`物品 ${i.id} 高度异常: ${i.h}`);
   });
   const ref=(id,src)=>{if(!itemMap[id])errs.push(`${src} 引用了不存在的物品id: ${id}`)};
   ITEM_RECIPES.forEach(r=>{ref(r.a,'物品配方['+r.name+']');ref(r.b,'物品配方['+r.name+']')});
