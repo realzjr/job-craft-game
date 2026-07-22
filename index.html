@@ -2,816 +2,777 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>岗位合成器 - 办公室炼金术</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#0f172a;min-height:100vh;min-height:100dvh;color:#e2e8f0;overflow:hidden;display:flex;flex-direction:column}
 
-body {
-  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: #f0f4f8;
-  min-height: 100vh;
-  color: #2d3748;
-}
+/* ===== ROOM AREA ===== */
+.room-area{flex:1;display:flex;flex-direction:column;padding:4px 8px 0;overflow:hidden}
+.room-nav{display:flex;align-items:center;justify-content:space-between;padding:4px 0;user-select:none}
+.arrow-btn{width:36px;height:36px;border-radius:10px;border:1.5px solid #475569;background:#1e293b;color:#94a3b8;font-size:1.2em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.arrow-btn:hover{border-color:#818cf8;color:#818cf8}
+.arrow-btn:active{transform:scale(.92)}
+.arrow-btn.disabled{opacity:.25;cursor:not-allowed}
+.room-title-area{text-align:center;flex:1}
+.room-title{font-size:1.05em;font-weight:700}
+.room-dots{display:flex;gap:5px;justify-content:center;margin-top:3px}
+.room-dot{width:7px;height:7px;border-radius:50%;background:#334155;transition:all .3s}
+.room-dot.active{background:#818cf8;width:18px;border-radius:4px}
+.room-dot.locked{background:#1e293b;border:1px solid #334155}
 
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
+/* Scene container */
+.room-container{flex:1;position:relative;overflow:hidden;border-radius:16px;margin:4px 0}
+.room-scene{position:absolute;inset:0;transition:opacity .25s,transform .25s;border-radius:16px;overflow:hidden}
+.room-scene.slide-out-left{opacity:0;transform:translateX(-60px)}
+.room-scene.slide-out-right{opacity:0;transform:translateX(60px)}
 
-/* Header */
-.header {
-  text-align: center;
-  padding: 30px 0 20px;
-}
-.header h1 {
-  font-size: 2em;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 6px;
-}
-.header .subtitle {
-  color: #718096;
-  font-size: 0.95em;
-}
+/* ===== ROOM SCENES: walls / floors / furniture ===== */
+/* 每个房间 = 墙面(上55%) + 地板(下45%)，家具用 .f 绝对定位，道具卡片按家具位置摆放 */
+.scene-bg{position:absolute;inset:0;z-index:0}
+.f{position:absolute;z-index:1;pointer-events:none}
 
-/* Progress */
-.progress-bar {
-  background: #e2e8f0;
-  border-radius: 20px;
-  height: 28px;
-  margin: 16px 0 24px;
-  position: relative;
-  overflow: hidden;
-}
-.progress-fill {
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  height: 100%;
-  border-radius: 20px;
-  transition: width 0.5s ease;
-  min-width: 0;
-}
-.progress-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 0.85em;
-  font-weight: 600;
-  color: #4a5568;
-}
+/* ---- 前台 reception: 入口玻璃门 + 接待台 + 钥匙挂板 + 伞架 + 收货区 ---- */
+.scene-bg.front{background:linear-gradient(180deg,#f5e6c8 0%,#eed6a3 54%,#b98a5e 54.5%,#8a5a3b 100%)}
+.scene-bg.front::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 11%,rgba(0,0,0,.08) 11% 11.6%),repeating-linear-gradient(180deg,transparent 0 22%,rgba(0,0,0,.05) 22% 23%)}
+.scene-bg.front::after{content:'';position:absolute;top:43%;left:0;right:0;height:1.6%;background:#d9b075;box-shadow:0 2px 3px rgba(0,0,0,.12)}
+.f.front-door{top:8%;left:4%;width:20%;height:47%;border:3px solid #8a6d3b;border-radius:6px 6px 0 0;background:linear-gradient(90deg,rgba(147,197,253,.4) 0 48.5%,#8a6d3b 48.5% 51.5%,rgba(147,197,253,.4) 51.5%)}
+.f.front-door::before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.45) 45%,transparent 60%)}
+.f.front-door::after{content:'推';position:absolute;top:46%;left:55%;font-size:.55em;color:#6b512b}
+.f.front-mat{top:56.5%;left:5%;width:18%;height:5.5%;background:#7f1d1d;border-radius:4px;opacity:.75;display:flex;align-items:center;justify-content:center;color:#fca5a5;font-size:.48em;letter-spacing:2px}
+.f.front-logo{top:6%;left:32%;width:36%;height:8.5%;background:linear-gradient(135deg,#818cf8,#c084fc);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.78em;letter-spacing:1px;box-shadow:0 3px 8px rgba(0,0,0,.2)}
+.f.front-clock{top:6.5%;left:71%;font-size:1.6em}
+.f.front-counter{top:45%;left:30%;width:48%;height:17%;background:linear-gradient(180deg,#eab308 0 10%,#a16207 10% 100%);border-radius:8px 8px 0 0;box-shadow:0 5px 12px rgba(0,0,0,.25)}
+.f.front-counter::after{content:'RECEPTION';position:absolute;top:52%;left:50%;transform:translateX(-50%);font-size:.5em;color:#fde68a;letter-spacing:3px}
+.f.front-keyrack{top:17%;left:79%;width:18%;height:16%;background:#8a6d3b;border:2px solid #6b512b;border-radius:4px}
+.f.front-keyrack::before{content:'🪝🪝🪝';position:absolute;bottom:5%;left:50%;transform:translateX(-50%);font-size:.55em;letter-spacing:2px}
+.f.front-shelf{top:45%;left:78%;width:19%;height:2%;background:#8a6d3b;border-radius:2px;box-shadow:0 3px 5px rgba(0,0,0,.25)}
+.f.front-stand{top:60%;left:5%;width:8%;height:14%;background:linear-gradient(180deg,#475569,#334155);border:2px solid #1e293b;border-radius:3px 3px 6px 6px}
+.f.front-tape{top:66%;left:16%;width:40%;height:17%;border:2px dashed rgba(180,84,10,.55);border-radius:8px}
+.f.front-tape::after{content:'📦 收货区';position:absolute;bottom:4%;right:5%;font-size:.55em;color:rgba(120,53,15,.7)}
+.f.front-plant{top:51%;left:88%;font-size:2.1em}
 
-/* Items Grid */
-.section-title {
-  font-size: 1.1em;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #4a5568;
-}
-.items-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 10px;
-  margin-bottom: 24px;
-}
-.item-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 6px;
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.85em;
-  color: #4a5568;
-  user-select: none;
-}
-.item-btn:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-}
-.item-btn:active {
-  transform: translateY(0);
-}
-.item-btn .emoji {
-  font-size: 2em;
-  line-height: 1;
-}
-.item-btn.selected-highlight {
-  border-color: #667eea;
-  background: #ebf4ff;
-}
+/* ---- 职能室 admin: 档案柜 + 白板 + 公告栏 + 办公桌 + 茶水角 ---- */
+.scene-bg.admin{background:linear-gradient(180deg,#dde6f2 0%,#cbd6e8 54%,#8e9bb3 54.5%,#6e7d97 100%)}
+.scene-bg.admin::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 24%,rgba(255,255,255,.08) 24% 25%),repeating-linear-gradient(180deg,transparent 0 30%,rgba(0,0,0,.07) 30% 31%)}
+.f.admin-cabinet{top:16%;left:3%;width:17%;height:46%;background:linear-gradient(180deg,#9fb0c4,#6c7d94);border:2px solid #51617a;border-radius:4px 4px 0 0}
+.f.admin-cabinet::before{content:'';position:absolute;inset:5% 9%;background:repeating-linear-gradient(180deg,transparent 0 18%,rgba(20,30,50,.25) 18% 20%,transparent 20% 25%)}
+.f.admin-cabinet::after{content:'档案';position:absolute;top:2%;left:50%;transform:translateX(-50%);font-size:.5em;color:#33415e;letter-spacing:2px}
+.f.admin-drawer{top:44%;left:4%;width:20%;height:6%;background:#8496ad;border:2px solid #51617a;border-radius:2px;box-shadow:0 5px 8px rgba(0,0,0,.3)}
+.f.admin-board{top:7%;left:26%;width:22%;height:17%;background:#fff;border:3px solid #94a3b8;border-radius:3px}
+.f.admin-board::before{content:'';position:absolute;inset:12% 8%;background:repeating-linear-gradient(180deg,transparent 0 30%,rgba(100,116,139,.35) 30% 32%),repeating-linear-gradient(90deg,transparent 0 13%,rgba(100,116,139,.35) 13% 14%)}
+.f.admin-cork{top:7%;left:52%;width:26%;height:16%;background:#c8a06a;border:4px solid #8a6d3b;border-radius:3px}
+.f.admin-cork::before{content:'📌';position:absolute;top:4%;right:4%;font-size:.7em}
+.f.admin-frame{top:8%;left:81%;width:15%;height:13%;border:3px solid #8a6d3b;background:#f5f0e6;transform:rotate(2deg);box-shadow:0 3px 6px rgba(0,0,0,.15)}
+.f.admin-chair{top:36%;left:41%;width:14%;height:11%;background:#33415e;border-radius:8px 8px 0 0}
+.f.admin-desk{top:45%;left:25%;width:50%;height:17%;background:linear-gradient(180deg,#d6bb92 0 10%,#8a6d3b 10%);border-radius:6px 6px 0 0;box-shadow:0 5px 12px rgba(0,0,0,.22)}
+.f.admin-desk::before{content:'';position:absolute;top:18%;right:6%;width:26%;height:72%;background:rgba(0,0,0,.18);border-radius:3px}
+.f.admin-pantry{top:41%;left:78%;width:19%;height:21%;background:linear-gradient(180deg,#e2e8f0 0 8%,#94a3b8 8%);border:2px solid #64748b;border-radius:6px 6px 0 0}
+.f.admin-pantry::before{content:'茶水角';position:absolute;bottom:8%;left:50%;transform:translateX(-50%);font-size:.5em;color:#334155;letter-spacing:1px}
+.f.admin-pantry::after{content:'🫖';position:absolute;top:11%;right:6%;font-size:1em}
 
-/* Workbench */
-.workbench {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.workbench-title {
-  font-size: 1em;
-  font-weight: 600;
-  color: #718096;
-  margin-bottom: 12px;
-}
-.slots-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-.slot {
-  width: 80px;
-  height: 80px;
-  border: 2px dashed #cbd5e0;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8em;
-  color: #a0aec0;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-  background: #f7fafc;
-}
-.slot.filled {
-  border-style: solid;
-  border-color: #667eea;
-  background: #ebf4ff;
-  color: #4a5568;
-}
-.slot.filled:hover {
-  background: #fee2e2;
-  border-color: #fc8181;
-}
-.slot .emoji { font-size: 1.8em; line-height: 1; }
-.slot .remove-hint {
-  display: none;
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  background: #fc8181;
-  color: white;
-  border-radius: 50%;
-  font-size: 12px;
-  line-height: 20px;
-  text-align: center;
-}
-.slot.filled:hover .remove-hint { display: block; }
-.plus-sign {
-  font-size: 1.5em;
-  color: #cbd5e0;
-  font-weight: 300;
-}
-.btn-row {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-.craft-btn {
-  padding: 10px 36px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 1.05em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.craft-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
-.craft-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-.clear-btn {
-  padding: 10px 20px;
-  background: #edf2f7;
-  color: #718096;
-  border: none;
-  border-radius: 10px;
-  font-size: 0.95em;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.clear-btn:hover { background: #e2e8f0; }
+/* ---- 研发室 lab: 服务器机架 + 白板 + 监控大屏 + 长条工位桌 + 吊灯线 ---- */
+.scene-bg.lab{background:linear-gradient(180deg,#0b1220 0%,#16213a 54%,#232f47 54.5%,#141d2e 100%)}
+.scene-bg.lab::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 19%,rgba(129,140,248,.07) 19% 20%)}
+.f.lab-led{top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#22c55e,#818cf8,#06b6d4,#22c55e);opacity:.7;box-shadow:0 0 14px rgba(129,140,248,.8)}
+.f.lab-server{top:14%;left:2%;width:13%;height:48%;background:#0a0f1a;border:2px solid #2d3b55;border-radius:4px}
+.f.lab-server::before{content:'';position:absolute;inset:5% 10%;background:repeating-linear-gradient(180deg,#1a2438 0 11%,#0a0f1a 11% 15%)}
+.f.lab-server::after{content:'';position:absolute;top:9%;right:16%;width:4px;height:4px;border-radius:50%;background:#22c55e;box-shadow:0 14px 0 #22c55e,0 28px 0 #f59e0b,0 42px 0 #22c55e,0 56px 0 #ef4444;animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.f.lab-board{top:6%;left:17%;width:26%;height:20%;background:#e8edf5;border:3px solid #475569;border-radius:3px}
+.f.lab-board::before{content:'';position:absolute;top:18%;left:8%;width:50%;height:7%;background:#94a3b8;box-shadow:0 10px 0 #cbd5e1,0 20px 0 #cbd5e1,30px 28px 0 rgba(248,113,113,.55);border-radius:2px}
+.f.lab-wallmon{top:6%;left:58%;width:30%;height:19%;background:#020617;border:3px solid #334155;border-radius:4px}
+.f.lab-wallmon::after{content:'▁▃▂▅▄▇▆█';position:absolute;bottom:10%;left:10%;font-size:.55em;color:#22c55e;letter-spacing:1px;opacity:.85}
+.f.lab-cord{top:0;left:51.5%;width:2px;height:7%;background:#475569}
+.f.lab-frame{top:28%;left:80%;width:18%;height:14%;border:3px solid #64748b;background:#0f172a;box-shadow:0 3px 8px rgba(0,0,0,.4)}
+.f.lab-desk{top:45%;left:17%;width:80%;height:16%;background:linear-gradient(180deg,#3b4a63 0 9%,#1e293b 9%);border-top:2px solid #475569;border-radius:6px 6px 0 0}
+.f.lab-desk::after{content:'';position:absolute;top:30%;left:5%;width:12%;height:55%;background:rgba(0,0,0,.25);border-radius:3px}
+.f.lab-cable{top:72%;left:28%;width:34%;height:9%;border-bottom:3px solid rgba(71,85,105,.7);border-radius:50%}
 
-/* Result popup */
-.result-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 100;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.3s;
-}
-.result-overlay.show { display: flex; }
-.result-card {
-  background: white;
-  border-radius: 20px;
-  padding: 36px 32px;
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
-  animation: popIn 0.4s ease;
-}
-.result-card.fail { }
-.result-card .result-emoji { font-size: 3.5em; margin-bottom: 12px; }
-.result-card .result-title { font-size: 1.5em; font-weight: 700; margin-bottom: 8px; color: #2d3748; }
-.result-card .result-formula { font-size: 1em; color: #718096; margin-bottom: 8px; }
-.result-card .result-desc { font-size: 0.95em; color: #4a5568; line-height: 1.6; margin-bottom: 20px; }
-.result-card .result-new { color: #48bb78; font-weight: 600; font-size: 0.9em; margin-bottom: 16px; }
-.result-card .result-dup { color: #ed8936; font-weight: 600; font-size: 0.9em; margin-bottom: 16px; }
-.result-card button {
-  padding: 10px 30px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 1em;
-  cursor: pointer;
-}
-.fail-text { color: #e53e3e; font-size: 1.1em; font-weight: 600; margin-bottom: 8px; }
-.fail-hint { color: #718096; font-size: 0.9em; margin-bottom: 20px; }
+/* ---- 市场室 market: 创意墙 + 投影幕 + 画架 + 三脚架 + 工作台 + 货堆托盘 ---- */
+.scene-bg.market{background:linear-gradient(180deg,#fdf6ec 0%,#fbeed9 54%,#e2bd93 54.5%,#c49a6c 100%)}
+.scene-bg.market::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 11%,rgba(0,0,0,.06) 11% 11.6%)}
+.f.market-bunting{top:1%;left:0;right:0;height:2.6%;background:repeating-linear-gradient(90deg,#f472b6 0 6%,#fbbf24 6% 12%,#34d399 12% 18%,#60a5fa 18% 24%);opacity:.55;border-radius:0 0 4px 4px}
+.f.market-ideawall{top:6%;left:4%;width:36%;height:22%;background:#f8e6c8;border:4px solid #d4a574;border-radius:4px}
+.f.market-ideawall::before{content:'';position:absolute;top:14%;left:8%;width:13%;height:20%;background:#fbbf24;transform:rotate(-4deg);box-shadow:26px 26px 0 #f472b6,52px 6px 0 #34d399,74px 30px 0 #60a5fa}
+.f.market-ideawall::after{content:'IDEA WALL';position:absolute;bottom:5%;right:6%;font-size:.5em;color:#a16207;letter-spacing:2px}
+.f.market-screen{top:5%;left:44%;width:30%;height:20%;background:linear-gradient(180deg,#fff,#eef2f7);border:2px solid #94a3b8;border-top:6px solid #475569;border-radius:2px}
+.f.market-screen::before{content:'';position:absolute;top:-16%;left:47%;width:6%;height:10%;background:#475569}
+.f.market-frame{top:29%;left:45%;width:15%;height:13%;border:3px solid #d4a574;background:#fff;transform:rotate(-2deg);box-shadow:0 3px 6px rgba(0,0,0,.12)}
+.f.market-easel{top:20%;left:77%;width:17%;height:26%;background:#fff;border:3px solid #a16207;border-radius:2px}
+.f.market-easel::before{content:'';position:absolute;bottom:-46%;left:12%;width:3px;height:46%;background:#a16207;transform:rotate(14deg);transform-origin:top}
+.f.market-easel::after{content:'';position:absolute;bottom:-46%;right:12%;width:3px;height:46%;background:#a16207;transform:rotate(-14deg);transform-origin:top}
+.f.market-tripod{top:44%;left:69%;width:3px;height:16%;background:#475569}
+.f.market-tripod::before{content:'';position:absolute;top:35%;left:-1px;width:3px;height:75%;background:#475569;transform:rotate(22deg);transform-origin:top}
+.f.market-tripod::after{content:'';position:absolute;top:35%;left:-1px;width:3px;height:75%;background:#475569;transform:rotate(-22deg);transform-origin:top}
+.f.market-table{top:46%;left:6%;width:48%;height:15%;background:linear-gradient(180deg,#f0d9b5 0 12%,#c49a6c 12%);border-radius:6px 6px 0 0;box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.f.market-pallet{top:72%;left:62%;width:30%;height:10%;background:repeating-linear-gradient(90deg,#a16207 0 12%,#854d0e 12% 14%);border-radius:3px;opacity:.55}
 
-/* Collection */
-.collection {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  margin-bottom: 30px;
-}
-.collection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
-}
-.job-card {
-  padding: 12px;
-  border-radius: 10px;
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.job-card:hover {
-  background: #ebf4ff;
-  border-color: #667eea;
-}
-.job-card .job-emoji { font-size: 1.5em; }
-.job-card .job-name { font-weight: 600; font-size: 0.95em; margin-top: 4px; }
-.job-card .job-formula-mini { font-size: 0.75em; color: #a0aec0; margin-top: 2px; }
-.job-card-unknown {
-  padding: 12px;
-  border-radius: 10px;
-  background: #f7fafc;
-  border: 1px dashed #cbd5e0;
-  text-align: center;
-  color: #cbd5e0;
-  font-size: 1.5em;
-}
-/* Detail overlay */
-.detail-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 100;
-  align-items: center;
-  justify-content: center;
-}
-.detail-overlay.show { display: flex; }
-.detail-card {
-  background: white;
-  border-radius: 20px;
-  padding: 32px;
-  max-width: 380px;
-  width: 90%;
-  text-align: center;
-  animation: popIn 0.3s ease;
-}
-.detail-card .result-emoji { font-size: 3em; margin-bottom: 8px; }
-.detail-card .result-title { font-size: 1.4em; font-weight: 700; margin-bottom: 6px; }
-.detail-card .result-formula { color: #718096; margin-bottom: 8px; }
-.detail-card .result-desc { color: #4a5568; line-height: 1.6; margin-bottom: 18px; }
-.detail-card button {
-  padding: 8px 24px;
-  background: #edf2f7;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #4a5568;
-}
+/* ---- 老板办公室 boss: 落地窗夜景 + 书柜酒柜 + 大班台 + 衣帽架 + 沙发茶几 ---- */
+.scene-bg.boss{background:linear-gradient(180deg,#2a2320 0%,#3d332c 54%,#4a3b2f 54.5%,#2e241d 100%)}
+.scene-bg.boss::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(100deg,transparent 0 15%,rgba(255,255,255,.03) 15% 16%)}
+.scene-bg.boss::after{content:'';position:absolute;top:40%;left:0;right:0;height:1.4%;background:#5c4a38}
+.f.boss-window{top:4%;left:28%;width:40%;height:36%;background:linear-gradient(180deg,#0b1a33,#142b52);border:4px solid #6b5744;border-radius:3px;overflow:hidden}
+.f.boss-window::before{content:'';position:absolute;bottom:0;left:6%;width:9%;height:42%;background:#1e3a5f;box-shadow:14px 10px 0 #24466e,28px -8px 0 #1e3a5f,42px 6px 0 #2a4f7a,56px -2px 0 #1e3a5f,70px 12px 0 #24466e,84px 2px 0 #2a4f7a}
+.f.boss-window::after{content:'🌙';position:absolute;top:7%;right:9%;font-size:.9em;opacity:.9}
+.f.boss-shelf{top:5%;left:72%;width:25%;height:57%;background:#2a211b;border:3px solid #6b5744;border-radius:4px}
+.f.boss-shelf::before{content:'';position:absolute;inset:2% 4%;background:repeating-linear-gradient(180deg,transparent 0 23%,#6b5744 23% 25%)}
+.f.boss-shelf::after{content:'📚';position:absolute;bottom:4%;left:8%;font-size:.9em;opacity:.8}
+.f.boss-rack{top:10%;left:7%;width:3px;height:48%;background:#6b5744}
+.f.boss-rack::before{content:'';position:absolute;top:2%;left:-13px;width:29px;height:3px;background:#6b5744;border-radius:2px}
+.f.boss-rack::after{content:'';position:absolute;bottom:-2px;left:-11px;width:25px;height:5px;background:#6b5744;border-radius:50%}
+.f.boss-rug{top:66%;left:20%;width:46%;height:16%;background:radial-gradient(ellipse at center,#7f1d1d 0%,#5b1515 70%);border-radius:50%;opacity:.5}
+.f.boss-chair{top:32%;left:34%;width:14%;height:15%;background:#171310;border:2px solid #6b5744;border-radius:10px 10px 0 0}
+.f.boss-desk{top:46%;left:18%;width:46%;height:18%;background:linear-gradient(180deg,#7c5a3a 0 9%,#4a3527 9%);border-radius:8px 8px 0 0;box-shadow:0 6px 16px rgba(0,0,0,.45)}
+.f.boss-desk::before{content:'';position:absolute;top:16%;left:6%;right:6%;height:70%;background:rgba(0,0,0,.22);border-radius:4px}
+.f.boss-sofa{top:60%;left:2%;width:26%;height:15%;background:#5b1f1f;border-radius:10px 10px 4px 4px;border-bottom:4px solid #3d1414}
+.f.boss-sofa::before{content:'';position:absolute;top:-26%;left:0;right:0;height:42%;background:#6d2626;border-radius:10px 10px 0 0}
+.f.boss-sofa::after{content:'';position:absolute;top:12%;left:6%;width:40%;height:48%;background:rgba(0,0,0,.18);border-radius:6px;box-shadow:48px 0 0 rgba(0,0,0,.18)}
+.f.boss-table{top:70%;left:31%;width:16%;height:8%;background:linear-gradient(180deg,#2a211b 0 28%,#171310 28%);border-radius:4px}
 
-/* Hint area */
-.hint-area {
-  text-align: center;
-  margin-bottom: 20px;
-}
-.hint-btn {
-  padding: 8px 20px;
-  background: #fefcbf;
-  border: 1px solid #ecc94b;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9em;
-  color: #744210;
-  transition: all 0.2s;
-}
-.hint-btn:hover { background: #fef3c7; }
-.hint-text {
-  margin-top: 10px;
-  font-size: 0.9em;
-  color: #975a16;
-  background: #fefcbf;
-  padding: 10px 16px;
-  border-radius: 8px;
-  display: none;
-}
-.hint-text.show { display: block; }
+/* ===== ITEM CARDS (absolute positioned) ===== */
+.item-card{position:absolute;width:60px;height:60px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:all .25s;user-select:none;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);backdrop-filter:blur(6px);z-index:2}
+.item-card:active{transform:scale(.9)!important}
+.item-card .item-emoji{font-size:1.6em;line-height:1}
+.item-card .item-name{font-size:.6em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-weight:600;max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* Hidden */
+.item-card.hidden-item{background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.08);backdrop-filter:blur(3px)}
+.item-card.hidden-item .item-emoji{filter:brightness(0);opacity:.2}
+.item-card.hidden-item .item-name{opacity:0}
+.item-card.hidden-item .discover-hint{position:absolute;font-size:1.3em;z-index:1}
 
-/* Responsive */
-@media (max-width: 500px) {
-  .items-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .item-btn { padding: 10px 4px; font-size: 0.78em; }
-  .item-btn .emoji { font-size: 1.6em; }
-  .slot { width: 68px; height: 68px; }
-  .collection-grid { grid-template-columns: repeat(2, 1fr); }
+/* Revealed */
+.item-card.revealed:hover{border-color:rgba(129,140,248,.8);box-shadow:0 0 12px rgba(129,140,248,.3);transform:scale(1.06)}
+
+/* Selected */
+.item-card.selected{border-color:#818cf8;background:rgba(129,140,248,.25);box-shadow:0 0 18px rgba(129,140,248,.4)}
+.item-card.selected::after{content:'✓';position:absolute;top:2px;right:4px;font-size:.6em;color:#fff;font-weight:700;text-shadow:0 0 4px #818cf8}
+
+/* Synth new glow */
+.item-card.synth-item{border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.1)}
+
+/* Discover animation */
+.item-card.discovering{animation:discoverFlash .5s ease}
+@keyframes discoverFlash{0%{transform:scale(1);box-shadow:none}50%{transform:scale(1.2);box-shadow:0 0 30px rgba(250,204,21,.6);border-color:#fbbf24}100%{transform:scale(1);box-shadow:none}}
+
+/* ===== CRAFT AREA ===== */
+.craft-area{background:#1e293bee;backdrop-filter:blur(10px);border-top:1px solid #334155;padding:8px 16px;z-index:10}
+.craft-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px}
+.c-slot{width:56px;height:56px;border:2px dashed #475569;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.7em;color:#475569;cursor:pointer;transition:all .2s;background:#0f172a;position:relative;flex-shrink:0}
+.c-slot.filled{border-style:solid;border-color:#818cf8;background:rgba(129,140,248,.08);color:#e2e8f0}
+.c-slot.filled:hover{border-color:#f87171}
+.c-slot .cs-emoji{font-size:1.4em}
+.c-slot .cs-name{font-size:.6em;color:#94a3b8;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-plus{color:#475569;font-size:1em;flex-shrink:0}
+.craft-btn{padding:7px 20px;background:linear-gradient(135deg,#818cf8,#c084fc);color:#fff;border:none;border-radius:10px;font-size:.9em;font-weight:600;cursor:pointer;transition:all .2s;flex-shrink:0}
+.craft-btn:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(129,140,248,.4)}
+.craft-btn:disabled{opacity:.25;cursor:not-allowed;transform:none;box-shadow:none}
+.craft-actions{display:flex;gap:8px;justify-content:center}
+.small-btn{padding:5px 14px;background:#334155;color:#94a3b8;border:none;border-radius:8px;font-size:.78em;cursor:pointer;transition:all .2s}
+.small-btn:hover{background:#475569}
+
+/* ===== CODEX OVERLAY ===== */
+.codex-popup{background:#1e293b;border:1px solid #475569;border-radius:20px;padding:20px 16px;max-width:420px;width:92%;max-height:80vh;animation:popIn .4s ease;display:flex;flex-direction:column}
+.codex-popup-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.codex-popup-header h2{font-size:1.1em;font-weight:700}
+.codex-popup-header h2 span{color:#818cf8}
+.codex-popup-close{width:32px;height:32px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#94a3b8;font-size:1.1em;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.codex-popup-close:hover{border-color:#818cf8;color:#818cf8}
+.codex-tabs{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+.codex-tab{padding:3px 10px;border-radius:14px;font-size:.72em;cursor:pointer;border:1px solid #334155;color:#94a3b8;background:transparent;transition:all .2s}
+.codex-tab.active{background:#818cf8;color:#fff;border-color:#818cf8}
+.codex-progress{height:3px;background:#334155;border-radius:2px;overflow:hidden;margin-bottom:10px}
+.codex-progress-fill{height:100%;background:linear-gradient(90deg,#818cf8,#c084fc);transition:width .5s ease}
+.codex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;flex:1;padding-right:4px}
+.codex-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;background:#0f172a;border:1px solid #334155;border-radius:8px;font-size:.68em;color:#94a3b8;text-align:center;cursor:pointer;transition:all .2s}
+.codex-item:hover{border-color:#818cf8}
+.codex-item .ci-emoji{font-size:1.5em}
+.codex-item.locked{opacity:.3}
+.codex-item.locked .ci-emoji{filter:grayscale(1)}
+
+/* ===== COMPANY MAP ===== */
+.map-popup{background:#1e293b;border:1px solid #475569;border-radius:20px;padding:20px 16px;max-width:420px;width:92%;animation:popIn .4s ease}
+.map-plan{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:96px 96px 84px;border:3px solid #64748b;border-radius:10px;overflow:hidden;background:#0f172a;margin-top:6px}
+.map-room{border:1px solid rgba(71,85,105,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;position:relative;background:#16213a;transition:background .2s}
+.map-room:hover{background:#1e2f4d}
+.map-room.cur{background:rgba(129,140,248,.16);box-shadow:inset 0 0 0 2px #818cf8}
+.map-room.locked{opacity:.45}
+.map-room .mr-emoji{font-size:1.5em}
+.map-room .mr-name{font-size:.8em;font-weight:600}
+.map-room .mr-count{font-size:.62em;color:#94a3b8;text-align:center;padding:0 4px}
+.map-room.entrance{grid-column:1/3}
+.map-door{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:34px;height:5px;background:#0f172a;border-radius:3px 3px 0 0}
+.map-room.entrance .map-door{background:#818cf8;height:6px}
+.map-legend{margin-top:10px;text-align:center;font-size:.72em;color:#64748b}
+
+/* ===== OVERLAYS ===== */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;animation:fadeIn .3s}
+.overlay.show{display:flex}
+.popup{background:#1e293b;border:1px solid #475569;border-radius:20px;padding:28px 24px;max-width:340px;width:88%;text-align:center;animation:popIn .4s ease}
+.popup .p-emoji{font-size:3em;margin-bottom:8px}
+.popup .p-title{font-size:1.3em;font-weight:700;margin-bottom:5px}
+.popup .p-formula{font-size:.85em;color:#64748b;margin-bottom:5px}
+.popup .p-tag{font-weight:600;font-size:.82em;margin-bottom:8px}
+.popup .p-tag.new{color:#22c55e}
+.popup .p-tag.dup{color:#f59e0b}
+.popup .p-desc{font-size:.85em;color:#94a3b8;line-height:1.6;margin-bottom:16px}
+.popup .p-fail{color:#f87171;font-size:1em;font-weight:600;margin-bottom:5px}
+.popup .p-egg{color:#fbbf24;font-size:.9em;margin-bottom:16px;line-height:1.5}
+.popup button{padding:8px 24px;background:linear-gradient(135deg,#818cf8,#c084fc);color:#fff;border:none;border-radius:10px;font-size:.9em;cursor:pointer}
+
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);background:#22c55e;color:#fff;padding:10px 24px;border-radius:16px;font-size:.95em;font-weight:600;opacity:0;transition:all .35s;z-index:70;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.toast.warn{background:linear-gradient(135deg,#f59e0b,#d97706)}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+
+@media(max-width:380px){
+  .item-card{width:52px;height:52px}
+  .item-card .item-emoji{font-size:1.3em}
+  .c-slot{width:48px;height:48px}
 }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <div class="header">
-    <h1>岗位合成器</h1>
-    <div class="subtitle">用办公室物品合成各种岗位，发现职场真相！</div>
-  </div>
-
-  <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width:0%"></div>
-    <div class="progress-text" id="progressText">已解锁 0 / 0 个岗位</div>
-  </div>
-
-  <!-- Items -->
-  <div class="section-title">📦 材料库</div>
-  <div class="items-grid" id="itemsGrid"></div>
-
-  <!-- Workbench -->
-  <div class="workbench">
-    <div class="workbench-title">🔧 合成台（选择 2~3 个材料）</div>
-    <div class="slots-row" id="slotsRow">
-      <div class="slot" id="slot0" onclick="removeSlot(0)"><span style="font-size:1.5em">①</span></div>
-      <div class="plus-sign">+</div>
-      <div class="slot" id="slot1" onclick="removeSlot(1)"><span style="font-size:1.5em">②</span></div>
-      <div class="plus-sign" id="plus2">+</div>
-      <div class="slot" id="slot2" onclick="removeSlot(2)"><span style="font-size:1.5em">③</span></div>
+<div class="room-area">
+  <div class="room-nav">
+    <button class="arrow-btn" id="btnPrev" onclick="prevRoom()">←</button>
+    <div class="room-title-area" onclick="openMap()" style="cursor:pointer">
+      <div class="room-title" id="roomTitle"></div>
+      <div class="room-dots" id="roomDots"></div>
     </div>
-    <div class="btn-row">
-      <button class="clear-btn" onclick="clearSlots()">清空</button>
-      <button class="craft-btn" id="craftBtn" onclick="craft()" disabled>合成！</button>
+    <button class="arrow-btn" id="btnNext" onclick="nextRoom()">→</button>
+  </div>
+  <div class="room-container" id="roomContainer"></div>
+</div>
+
+<div class="craft-area">
+  <div class="craft-row">
+    <div class="c-slot" id="cs0" onclick="removeCraftSlot(0)"><span style="font-size:1em">①</span></div>
+    <span class="c-plus">+</span>
+    <div class="c-slot" id="cs1" onclick="removeCraftSlot(1)"><span style="font-size:1em">②</span></div>
+    <button class="craft-btn" id="craftBtn" onclick="doCraft()" disabled>合成!</button>
+  </div>
+  <div class="craft-actions">
+    <button class="small-btn" onclick="clearCraft()">清空</button>
+    <button class="small-btn" onclick="showHint()">💡 提示</button>
+    <button class="small-btn" onclick="openMap()">🗺️ 地图</button>
+    <button class="small-btn" onclick="openCodex()">📖 图鉴</button>
+  </div>
+</div>
+
+<div class="overlay" id="codexOverlay" onclick="closeOverlay(event)">
+  <div class="codex-popup" onclick="event.stopPropagation()">
+    <div class="codex-popup-header">
+      <h2>📖 图鉴 <span id="codexCount">0/0</span></h2>
+      <button class="codex-popup-close" onclick="closeCodex()">✕</button>
     </div>
-  </div>
-
-  <!-- Hint -->
-  <div class="hint-area">
-    <button class="hint-btn" onclick="showHint()">💡 给个提示</button>
-    <div class="hint-text" id="hintText"></div>
-  </div>
-
-  <!-- Collection -->
-  <div class="collection">
-    <div class="section-title">🏆 岗位图鉴 <span id="collCount"></span></div>
-    <div class="collection-grid" id="collectionGrid"></div>
+    <div class="codex-tabs" id="codexTabs"></div>
+    <div class="codex-progress"><div class="codex-progress-fill" id="codexProgressFill" style="width:0%"></div></div>
+    <div class="codex-grid" id="codexGrid"></div>
   </div>
 </div>
 
-<!-- Result Overlay -->
-<div class="result-overlay" id="resultOverlay" onclick="closeResult(event)">
-  <div class="result-card" id="resultCard"></div>
+<div class="overlay" id="mapOverlay" onclick="closeOverlay(event)">
+  <div class="map-popup" onclick="event.stopPropagation()">
+    <div class="codex-popup-header">
+      <h2>🗺️ 公司平面图</h2>
+      <button class="codex-popup-close" onclick="closeMap()">✕</button>
+    </div>
+    <div class="map-plan" id="mapPlan"></div>
+    <div class="map-legend">点击房间快速前往 · 底部 🚪 为公司正门</div>
+  </div>
 </div>
 
-<!-- Detail Overlay -->
-<div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
-  <div class="detail-card" id="detailCard"></div>
-</div>
+<div class="overlay" id="resultOverlay" onclick="closeOverlay(event)"><div class="popup" id="resultCard"></div></div>
+<div class="overlay" id="detailOverlay" onclick="closeOverlay(event)"><div class="popup" id="detailCard"></div></div>
+<div class="toast" id="toast"></div>
 
 <script>
-// === DATA ===
-const ITEMS = [
-  { id: 'abacus',  emoji: '🧮', name: '算盘' },
-  { id: 'pot',     emoji: '🍳', name: '锅' },
-  { id: 'keyboard',emoji: '⌨️', name: '键盘' },
-  { id: 'coffee',  emoji: '☕', name: '咖啡' },
-  { id: 'phone',   emoji: '📞', name: '电话' },
-  { id: 'tie',     emoji: '👔', name: '领带' },
-  { id: 'stamp',   emoji: '🔏', name: '印章' },
-  { id: 'note',    emoji: '📝', name: '便利贴' },
-  { id: 'scissors',emoji: '✂️', name: '剪刀' },
-  { id: 'magnify', emoji: '🔍', name: '放大镜' },
-  { id: 'key',     emoji: '🔑', name: '钥匙' },
-  { id: 'clock',   emoji: '⏰', name: '闹钟' },
-  { id: 'mask',    emoji: '🎭', name: '面具' },
-  { id: 'bug',     emoji: '🐛', name: '虫子' },
-  { id: 'pie',     emoji: '🥧', name: '饼' },
-  { id: 'horn',    emoji: '📢', name: '喇叭' },
-  { id: 'calendar',emoji: '📅', name: '日历' },
-  { id: 'pillow',  emoji: '🛏️', name: '枕头' },
-  { id: 'shield',  emoji: '🛡️', name: '盾牌' },
-  { id: 'broom',   emoji: '🧹', name: '扫帚' },
+// ==================== DATA ====================
+const ROOMS=[
+  {id:'front',name:'前台',emoji:'🛎️',unlockAt:0},
+  {id:'admin',name:'职能室',emoji:'📋',unlockAt:2,unlockText:'合成2个岗位解锁'},
+  {id:'lab',name:'研发室',emoji:'🔬',unlockAt:0},
+  {id:'market',name:'市场室',emoji:'📣',unlockAt:5,unlockText:'合成5个岗位解锁'},
+  {id:'boss',name:'老板办公室',emoji:'🚪',unlockAt:10,unlockText:'合成10个岗位解锁'},
 ];
 
-const itemMap = {};
-ITEMS.forEach(it => itemMap[it.id] = it);
-
-const RECIPES = [
-  {
-    inputs: ['abacus', 'pot'],
-    job: '会计',
-    emoji: '🧑‍💼',
-    desc: '能算账，更能背锅。\n数字算得清清楚楚，黑锅背得明明白白。'
-  },
-  {
-    inputs: ['keyboard', 'coffee', 'bug'],
-    job: '程序员',
-    emoji: '👨‍💻',
-    desc: '靠咖啡续命，与Bug共生。\n改一个Bug，生三个Bug，生生不息。'
-  },
-  {
-    inputs: ['scissors', 'mask'],
-    job: 'HR',
-    emoji: '🤵',
-    desc: '微笑着递上裁员通知书。\n面带微笑是职业素养，手持剪刀是业务需要。'
-  },
-  {
-    inputs: ['tie', 'pie'],
-    job: 'CEO',
-    emoji: '🤴',
-    desc: '西装革履，专业画饼三十年。\n今天的饼虽然大，但明天的会更大！'
-  },
-  {
-    inputs: ['note', 'pie'],
-    job: '产品经理',
-    emoji: '📋',
-    desc: '需求贴满墙，交付靠画饼。\n这个需求很简单，怎么实现我不管。'
-  },
-  {
-    inputs: ['magnify', 'scissors'],
-    job: '法务',
-    emoji: '⚖️',
-    desc: '拿放大镜找合同漏洞，拿剪刀裁掉法律风险。\n每个字都是证据，每个逗号都是武器。'
-  },
-  {
-    inputs: ['phone', 'horn'],
-    job: '销售',
-    emoji: '📣',
-    desc: '左手电话右手喇叭，能打能吆喝。\n只要脸皮够厚，全世界都是客户。'
-  },
-  {
-    inputs: ['key', 'clock'],
-    job: '保安大叔',
-    emoji: '💂',
-    desc: '管着全楼的钥匙，定点巡逻风雨无阻。\n你上班他在，你下班他还在。'
-  },
-  {
-    inputs: ['magnify', 'bug'],
-    job: '测试工程师',
-    emoji: '🔬',
-    desc: '拿着放大镜，专业捉虫二十年。\n开发说"在我电脑上是好的"，测试说"但在我这不行"。'
-  },
-  {
-    inputs: ['key', 'coffee', 'clock'],
-    job: '运维工程师',
-    emoji: '🔧',
-    desc: '凌晨三点被闹醒，灌口咖啡去救火。\n服务器比女朋友重要，因为它真的会在半夜找你。'
-  },
-  {
-    inputs: ['magnify', 'abacus'],
-    job: '审计',
-    emoji: '🕵️',
-    desc: '一手放大镜一手算盘，谁也别想蒙混过关。\n三年前的一毛钱差额，也能给你翻出来。'
-  },
-  {
-    inputs: ['clock', 'horn', 'note'],
-    job: '项目经理',
-    emoji: '🗓️',
-    desc: '催催催！DDL贴满墙，喇叭喊到嗓子哑。\n什么都不会，但什么都能催。'
-  },
-  {
-    inputs: ['horn', 'mask'],
-    job: '市场营销',
-    emoji: '🎪',
-    desc: '包装一下，大声吆喝，把稻草卖出黄金价。\n不是产品不行，是你不懂欣赏。'
-  },
-  {
-    inputs: ['coffee', 'phone', 'note'],
-    job: '行政秘书',
-    emoji: '💁',
-    desc: '泡咖啡、接电话、记行程，三位一体。\n老板的日程比自己的命还重要。'
-  },
-  {
-    inputs: ['tie', 'stamp'],
-    job: '领导',
-    emoji: '👑',
-    desc: '穿得体面，负责盖章。\n开会举手同意，签字一挥而就，其他的不归我管。'
-  },
-  {
-    inputs: ['keyboard', 'bug', 'shield'],
-    job: '网络安全工程师',
-    emoji: '🛡️',
-    desc: '键盘是武器，盾牌是信仰，虫子是敌人。\n别人写代码，我找代码的漏洞。'
-  },
-  {
-    inputs: ['pillow', 'keyboard'],
-    job: '自由职业者',
-    emoji: '🏖️',
-    desc: '枕头旁边放键盘，醒了就是上班。\n没有通勤烦恼，也没有下班时间。'
-  },
-  {
-    inputs: ['broom', 'key'],
-    job: '物业管家',
-    emoji: '🧹',
-    desc: '扫帚扫天下，钥匙开万门。\n业主的问题千千万，物业的回答就一个：已登记。'
-  },
-  {
-    inputs: ['calendar', 'scissors'],
-    job: '裁员专家',
-    emoji: '📉',
-    desc: '翻着日历算日子，拿着剪刀裁人头。\n优化、毕业、人员调整——花式说再见。'
-  },
-  {
-    inputs: ['coffee', 'pillow'],
-    job: '实习生',
-    emoji: '🐣',
-    desc: '困了喝咖啡，累了想睡觉。\n钱少活多离家远，但简历上能写一行字。'
-  },
-  {
-    inputs: ['abacus', 'stamp'],
-    job: '财务总监',
-    emoji: '💰',
-    desc: '算完账盖个章，公司的钱就这么花了。\n签字的笔比算盘还重。'
-  },
-  {
-    inputs: ['phone', 'mask', 'note'],
-    job: '客服',
-    emoji: '🎧',
-    desc: '电话响不停，微笑看不见，记录本写满。\n"您的问题我已记录，请耐心等待。"'
-  },
-  {
-    inputs: ['magnify', 'keyboard'],
-    job: 'Code Reviewer',
-    emoji: '🧐',
-    desc: '拿着放大镜看你每一行代码。\n"这里为什么不用const？" "这个变量名不够语义化。"'
-  },
-  {
-    inputs: ['pie', 'horn', 'tie'],
-    job: '投资人',
-    emoji: '🦈',
-    desc: '画的饼比CEO还大，喊得比销售还响，穿得比领导还正。\n"赛道很好，但我们再看看。"'
-  },
-  {
-    inputs: ['clock', 'coffee', 'calendar'],
-    job: '打工人',
-    emoji: '🫠',
-    desc: '闹钟叫醒肉体，咖啡唤醒灵魂，日历提醒你还没到周五。\n工作使我快乐（大雾）。'
-  },
+// Items with positions (x=left%, y=top%)，每件道具锚定在场景家具上
+const BASE_ITEMS=[
+  // lab - 研发室：桌面放键盘/显示器/咖啡，灯泡吊天花板，图表贴白板，虫子爬地上
+  {id:'keyboard',emoji:'⌨️',name:'键盘',room:'lab',x:20,y:37},
+  {id:'coffee',emoji:'☕',name:'咖啡',room:'lab',x:52,y:37},
+  {id:'bug',emoji:'🐛',name:'虫子',room:'lab',x:66,y:72},
+  {id:'bulb',emoji:'💡',name:'灯泡',room:'lab',x:45,y:7},
+  {id:'monitor',emoji:'🖥️',name:'显示器',room:'lab',x:36,y:35},
+  {id:'chart',emoji:'📊',name:'图表',room:'lab',x:22,y:9},
+  // front - 前台：电话/花瓶在接待台上，钥匙挂墙板，面具挂墙，伞插伞架，快递在收货区地上
+  {id:'phone',emoji:'📞',name:'电话',room:'front',x:31,y:36},
+  {id:'mask',emoji:'🎭',name:'面具',room:'front',x:46,y:17},
+  {id:'key',emoji:'🔑',name:'钥匙',room:'front',x:81,y:19},
+  {id:'vase',emoji:'🌸',name:'花瓶',room:'front',x:63,y:36},
+  {id:'umbrella',emoji:'☂️',name:'雨伞',room:'front',x:3,y:52},
+  {id:'parcel',emoji:'📦',name:'快递',room:'front',x:18,y:67},
+  // admin - 职能室：桌面放算盘/印章/剪刀，文件夹在拉开的抽屉上，日历挂白板，锅在茶水角
+  {id:'abacus',emoji:'🧮',name:'算盘',room:'admin',x:26,y:37},
+  {id:'pot',emoji:'🍳',name:'锅',room:'admin',x:78,y:33},
+  {id:'scissors',emoji:'✂️',name:'剪刀',room:'admin',x:57,y:37},
+  {id:'folder',emoji:'📁',name:'文件夹',room:'admin',x:4,y:36},
+  {id:'stamp',emoji:'🔏',name:'印章',room:'admin',x:42,y:37},
+  {id:'calendar',emoji:'📅',name:'日历',room:'admin',x:29,y:9},
+  // market - 市场室：喇叭/饼在工作台，便利贴在创意墙，颜料在画架，相机在三脚架，礼品堆托盘
+  {id:'horn',emoji:'📢',name:'喇叭',room:'market',x:10,y:38},
+  {id:'pie',emoji:'🥧',name:'饼',room:'market',x:28,y:38},
+  {id:'note',emoji:'📝',name:'便利贴',room:'market',x:7,y:9},
+  {id:'paint',emoji:'🎨',name:'颜料',room:'market',x:78,y:33},
+  {id:'camera',emoji:'📸',name:'相机',room:'market',x:62,y:36},
+  {id:'gift',emoji:'🎁',name:'礼品',room:'market',x:68,y:64},
+  // boss - 老板办公室：领带挂衣帽架，奖杯/红酒在书柜层板，钢笔/折扇在大班台，沙发即沙发
+  {id:'tie',emoji:'👔',name:'领带',room:'boss',x:2,y:14},
+  {id:'trophy',emoji:'🏆',name:'奖杯',room:'boss',x:74,y:8},
+  {id:'pen',emoji:'🖋️',name:'钢笔',room:'boss',x:19,y:38},
+  {id:'sofa',emoji:'🛋️',name:'沙发',room:'boss',x:6,y:52},
+  {id:'wine',emoji:'🍷',name:'红酒',room:'boss',x:74,y:36},
+  {id:'fan',emoji:'🪭',name:'折扇',room:'boss',x:49,y:38},
 ];
 
-// Normalize recipe keys
-RECIPES.forEach(r => {
-  r.key = [...r.inputs].sort().join('+');
-});
+// Synth items with positions（同样锚定家具）
+const ITEM_RECIPES=[
+  {a:'keyboard',b:'bug',result:'bugcode',emoji:'🪲',name:'Bug代码',desc:'键盘敲出虫子',room:'lab',x:62,y:8},
+  {a:'coffee',b:'monitor',result:'workstation',emoji:'🏢',name:'工位',desc:'咖啡+屏幕=程序员工位',room:'lab',x:76,y:37},
+  {a:'scissors',b:'folder',result:'layoff',emoji:'📄',name:'裁员通知',desc:'剪掉你的档案',room:'admin',x:55,y:9},
+  {a:'horn',b:'pie',result:'ppt',emoji:'📽️',name:'PPT',desc:'大声画饼=演示文稿',room:'market',x:50,y:8},
+  {a:'tie',b:'trophy',result:'power',emoji:'👑',name:'权力',desc:'穿得体面+功绩=权力',room:'boss',x:33,y:18},
+  {a:'phone',b:'mask',result:'fakesmile',emoji:'😊',name:'职业微笑',desc:'接电话戴面具=职业假笑',room:'front',x:47,y:36},
+  {a:'abacus',b:'stamp',result:'budget',emoji:'💰',name:'预算',desc:'算完盖章=批预算',room:'admin',x:3,y:4},
+  {a:'note',b:'chart',result:'prd',emoji:'📑',name:'需求文档',desc:'贴需求+画图表=PRD',room:'market',x:24,y:9},
+  {a:'paint',b:'camera',result:'poster',emoji:'🖼️',name:'海报',desc:'上色+拍照=宣传海报',room:'market',x:46,y:29},
+  {a:'pen',b:'calendar',result:'contract',emoji:'📜',name:'合同',desc:'签字+约定日期=合同',room:'admin',x:80,y:10},
+  {a:'bulb',b:'note',result:'patent',emoji:'💎',name:'专利',desc:'灵感+记录=专利',room:'lab',x:81,y:29},
+  {a:'wine',b:'sofa',result:'secret',emoji:'🚪',name:'密室',desc:'红酒+沙发=老板密室',room:'boss',x:74,y:22},
+  {a:'key',b:'parcel',result:'warehouse',emoji:'🏭',name:'仓库',desc:'钥匙开箱=仓库管理',room:'front',x:40,y:67},
+  {a:'vase',b:'umbrella',result:'fengshui',emoji:'🏯',name:'风水局',desc:'花瓶+伞=玄学摆设',room:'front',x:80,y:36},
+  {a:'fan',b:'pot',result:'jianghu',emoji:'⚔️',name:'江湖',desc:'折扇+锅=江湖气',room:'boss',x:30,y:63},
+];
 
-// Build recipe lookup
-const recipeLookup = {};
-RECIPES.forEach(r => { recipeLookup[r.key] = r; });
+const SYNTH_ITEMS=ITEM_RECIPES.map(r=>({id:r.result,emoji:r.emoji,name:r.name,room:r.room,isSynth:true,x:r.x,y:r.y}));
+const ALL_ITEMS=[...BASE_ITEMS,...SYNTH_ITEMS];
+const itemMap={};ALL_ITEMS.forEach(i=>itemMap[i.id]=i);
 
-// === STATE ===
-let slots = [null, null, null]; // item ids
-let discovered = JSON.parse(localStorage.getItem('jobcraft_discovered') || '[]');
+const itemRecipeLookup={};
+ITEM_RECIPES.forEach(r=>{const k=[r.a,r.b].sort().join('+');r.key=k;itemRecipeLookup[k]=r});
 
-// === RENDER ===
-function renderItems() {
-  const grid = document.getElementById('itemsGrid');
-  grid.innerHTML = '';
-  ITEMS.forEach(item => {
-    const btn = document.createElement('div');
-    btn.className = 'item-btn';
-    btn.id = 'item_' + item.id;
-    btn.innerHTML = `<span class="emoji">${item.emoji}</span>${item.name}`;
-    btn.onclick = () => addToSlot(item.id);
-    grid.appendChild(btn);
+// Room scene furniture HTML（顺序即叠放顺序：先地毯后家具）
+const ROOM_DECOS={
+  front:'<div class="f front-door"></div><div class="f front-mat">WELCOME</div><div class="f front-logo">🏢 摸鱼科技</div><div class="f front-clock">🕐</div><div class="f front-counter"></div><div class="f front-keyrack"></div><div class="f front-shelf"></div><div class="f front-stand"></div><div class="f front-tape"></div><div class="f front-plant">🪴</div>',
+  admin:'<div class="f admin-cabinet"></div><div class="f admin-drawer"></div><div class="f admin-board"></div><div class="f admin-cork"></div><div class="f admin-frame"></div><div class="f admin-chair"></div><div class="f admin-desk"></div><div class="f admin-pantry"></div>',
+  lab:'<div class="f lab-led"></div><div class="f lab-server"></div><div class="f lab-board"></div><div class="f lab-wallmon"></div><div class="f lab-cord"></div><div class="f lab-frame"></div><div class="f lab-desk"></div><div class="f lab-cable"></div>',
+  market:'<div class="f market-bunting"></div><div class="f market-ideawall"></div><div class="f market-screen"></div><div class="f market-frame"></div><div class="f market-easel"></div><div class="f market-tripod"></div><div class="f market-table"></div><div class="f market-pallet"></div>',
+  boss:'<div class="f boss-window"></div><div class="f boss-shelf"></div><div class="f boss-rack"></div><div class="f boss-rug"></div><div class="f boss-chair"></div><div class="f boss-desk"></div><div class="f boss-sofa"></div><div class="f boss-table"></div>',
+};
+
+// 75 job recipes
+const JOB_RECIPES=[
+  {a:'abacus',b:'pot',job:'会计',emoji:'🧑‍💼',desc:'能算账，更能背锅。\n数字算得清清楚楚，黑锅背得明明白白。'},
+  {a:'scissors',b:'mask',job:'HR',emoji:'🤵',desc:'微笑着递上裁员通知书。\n面带微笑是职业素养，手持剪刀是业务需要。'},
+  {a:'phone',b:'horn',job:'销售',emoji:'📣',desc:'左手电话右手喇叭，能打能吆喝。\n只要脸皮够厚，全世界都是客户。'},
+  {a:'key',b:'vase',job:'前台',emoji:'💁',desc:'管钥匙管花瓶，公司的门面担当。\n来访登记、快递签收、浇花换水，一个人就是服务队。'},
+  {a:'bug',b:'bulb',job:'测试工程师',emoji:'🔬',desc:'在黑暗中寻找Bug的提灯人。\n开发说"在我电脑上是好的"，测试说"但在我这不行"。'},
+  {a:'coffee',b:'keyboard',job:'程序员',emoji:'👨‍💻',desc:'靠咖啡续命，靠键盘吃饭。\n改一个Bug，生三个Bug，生生不息。'},
+  {a:'calendar',b:'horn',job:'项目经理',emoji:'🗓️',desc:'翻着日历催进度，喇叭从不离手。\n什么都不会，但什么都能催。'},
+  {a:'tie',b:'pie',job:'CEO',emoji:'🤴',desc:'西装革履，专业画饼三十年。\n今天的饼虽然大，但明天的会更大！'},
+  {a:'note',b:'pie',job:'产品经理',emoji:'📋',desc:'需求贴满墙，交付靠画饼。\n这个需求很简单，怎么实现我不管。'},
+  {a:'pen',b:'folder',job:'法务',emoji:'⚖️',desc:'逐字逐句审合同，每个逗号都是武器。\n别人看到字，法务看到钱。'},
+  {a:'paint',b:'gift',job:'设计师',emoji:'🎨',desc:'颜料+礼品=每个作品都是送给甲方的礼物。\n"这个蓝色能不能再蓝一点？"'},
+  {a:'sofa',b:'coffee',job:'实习生',emoji:'🐣',desc:'蹭沙发喝咖啡，工资约等于零。\n但简历上能写一行字。'},
+  {a:'trophy',b:'stamp',job:'领导',emoji:'👑',desc:'拿奖杯装门面，盖印章定乾坤。\n开会举手同意，签字一挥而就。'},
+  {a:'parcel',b:'umbrella',job:'外卖骑手',emoji:'🛵',desc:'风雨无阻送快递。\n导航说三分钟到，客户说怎么还没到。'},
+  {a:'fan',b:'wine',job:'投资人',emoji:'🦈',desc:'扇着折扇品红酒，"赛道不错，再看看"。\n投了一百个项目，成了一个就够了。'},
+  {a:'bugcode',b:'bulb',job:'测试架构师',emoji:'🏗️',desc:'在Bug的海洋里寻找那束光。\n不仅要找Bug，还要设计找Bug的系统。'},
+  {a:'workstation',b:'bug',job:'运维工程师',emoji:'🔧',desc:'守着工位修Bug，凌晨三点是常态。\n服务器比女朋友重要，因为它真的会在半夜找你。'},
+  {a:'layoff',b:'fakesmile',job:'裁员专家',emoji:'📉',desc:'笑着把你优化掉。\n优化、毕业、人员调整——花式说再见。'},
+  {a:'ppt',b:'power',job:'战略顾问',emoji:'🎩',desc:'PPT治国，权力背书。\n一页PPT收费十万，内容全是废话。'},
+  {a:'budget',b:'ppt',job:'财务总监',emoji:'💼',desc:'算完预算做PPT，钱是怎么花的全靠演。\n数字不会说谎，但做PPT的人会。'},
+  {a:'prd',b:'keyboard',job:'全栈工程师',emoji:'🦸',desc:'自己写需求自己开发，一个人就是一支队伍。\n前端后端运维测试，全都是我。'},
+  {a:'poster',b:'horn',job:'市场总监',emoji:'📺',desc:'海报贴满城，喇叭喊破天。\n品牌知名度是喊出来的。'},
+  {a:'contract',b:'abacus',job:'审计',emoji:'🕵️',desc:'拿着合同查着账，三年前的一毛钱也不放过。\n审计面前，人人平等。'},
+  {a:'patent',b:'trophy',job:'首席科学家',emoji:'🧪',desc:'专利等身，奖杯满柜。\n实验室比家里待的时间长。'},
+  {a:'secret',b:'phone',job:'办公室政治家',emoji:'🐍',desc:'密室里打电话，暗中操控一切。\n谁升职谁离职，都在他的通讯录里。'},
+  {a:'warehouse',b:'calendar',job:'供应链经理',emoji:'🚚',desc:'管着仓库看着日历，供货准时是信仰。\n一个零件延迟，整条线停产。'},
+  {a:'fengshui',b:'sofa',job:'行政主管',emoji:'🏛️',desc:'办公室风水她说了算，工位朝向有讲究。\n绿植摆放都是学问。'},
+  {a:'jianghu',b:'mask',job:'商务总监',emoji:'🤝',desc:'江湖气+戴面具，饭局上无往不胜。\n三杯酒下肚，合同就签了。'},
+  {a:'fakesmile',b:'note',job:'客服',emoji:'🎧',desc:'永远微笑着说"已记录"。\n你的问题我已记录，请耐心等待（永远等待）。'},
+  {a:'power',b:'contract',job:'董事长',emoji:'🏰',desc:'权力在手，签字为王。\n开不开会无所谓，决定早就做好了。'},
+  {a:'keyboard',b:'phone',job:'远程客服',emoji:'🏠',desc:'键盘敲字电话聊，在家上班也挺累。'},
+  {a:'keyboard',b:'chart',job:'数据分析师',emoji:'📈',desc:'键盘飞速敲，图表满屏跑。'},
+  {a:'keyboard',b:'pen',job:'技术文档工程师',emoji:'📝',desc:'一手键盘一手钢笔，代码和文档两手抓。'},
+  {a:'keyboard',b:'note',job:'需求搬运工',emoji:'🏗️',desc:'把便利贴上的需求敲进电脑，就是我的全部工作。'},
+  {a:'keyboard',b:'gift',job:'电商运营',emoji:'🛒',desc:'键盘下单送礼品，双十一的幕后英雄。'},
+  {a:'coffee',b:'horn',job:'培训讲师',emoji:'🎤',desc:'灌了三杯咖啡，嗓子喊了一天。'},
+  {a:'coffee',b:'chart',job:'咨询顾问',emoji:'☕',desc:'喝着咖啡看图表，一小时收费两千。'},
+  {a:'coffee',b:'calendar',job:'打工人',emoji:'🫠',desc:'咖啡续命看日历，还有三天才到周五。'},
+  {a:'coffee',b:'mask',job:'职场演员',emoji:'🎬',desc:'喝完咖啡戴上面具，又是元气满满的一天（假的）。'},
+  {a:'coffee',b:'gift',job:'公关经理',emoji:'🎀',desc:'咖啡约人送礼品，人脉就是这么来的。'},
+  {a:'bug',b:'chart',job:'QA主管',emoji:'🔎',desc:'用图表统计Bug数量——这个月又创新高了。'},
+  {a:'bug',b:'scissors',job:'代码审查员',emoji:'🧐',desc:'找到虫子就剪掉，一刀一个准。'},
+  {a:'bug',b:'mask',job:'甩锅工程师',emoji:'🤷',desc:'这个Bug不是我的，我只是路过。'},
+  {a:'bug',b:'phone',job:'技术支持',emoji:'📱',desc:'电话响了，又是Bug。'},
+  {a:'bulb',b:'keyboard',job:'极客',emoji:'🤓',desc:'灵感来了就敲代码，一敲就是通宵。'},
+  {a:'bulb',b:'trophy',job:'发明家',emoji:'💡',desc:'灯泡亮了奖杯到了，专利墙又多了一块。'},
+  {a:'bulb',b:'tie',job:'创业者',emoji:'🚀',desc:'有想法穿西装，就差一个程序员了。'},
+  {a:'bulb',b:'horn',job:'布道师',emoji:'📡',desc:'灯泡代表想法，喇叭负责传播。'},
+  {a:'monitor',b:'chart',job:'大屏工程师',emoji:'🖥️',desc:'把图表放到大屏上，领导最爱看这个。'},
+  {a:'monitor',b:'phone',job:'网管',emoji:'🔌',desc:'盯着屏幕接电话——又断网了是吧？'},
+  {a:'monitor',b:'pen',job:'UI设计师',emoji:'✏️',desc:'屏幕上画来画去，像素级别的强迫症。'},
+  {a:'monitor',b:'calendar',job:'考勤专员',emoji:'⏰',desc:'盯着屏幕查考勤，迟到一分钟也跑不掉。'},
+  {a:'monitor',b:'mask',job:'摸鱼达人',emoji:'🐟',desc:'屏幕前戴着面具假装工作。'},
+  {a:'chart',b:'calendar',job:'周报写手',emoji:'📝',desc:'图表+日期，一篇周报就搞定。'},
+  {a:'chart',b:'horn',job:'路演专家',emoji:'💹',desc:'拿着图表上台吹，投资人听得直点头。'},
+  {a:'chart',b:'trophy',job:'绩效考核官',emoji:'🏅',desc:'用图表说话，奖杯给谁我说了算。'},
+  {a:'camera',b:'horn',job:'自媒体博主',emoji:'📲',desc:'拍了照就发，流量比工资重要。'},
+  {a:'camera',b:'gift',job:'电商摄影师',emoji:'📷',desc:'把礼品拍出高级感，五毛特效变五千。'},
+  {a:'camera',b:'tie',job:'商务摄影师',emoji:'🤵',desc:'西装革履拍证件照，背景一定要蓝色。'},
+  {a:'camera',b:'key',job:'安防主管',emoji:'🔐',desc:'监控摄像+钥匙管理，整栋楼都在我眼皮底下。'},
+  {a:'gift',b:'horn',job:'活动策划',emoji:'🎉',desc:'礼品加喇叭，年会就差一个主持人了。'},
+  {a:'gift',b:'trophy',job:'颁奖策划',emoji:'🏆',desc:'奖杯配礼品，仪式感拉满。'},
+  {a:'gift',b:'note',job:'行政助理',emoji:'📌',desc:'备礼品记便签，老板的生活全靠我。'},
+  {a:'gift',b:'umbrella',job:'地推专员',emoji:'🌂',desc:'送把伞扫个码，拉新就这么简单。'},
+  {a:'pen',b:'trophy',job:'签约达人',emoji:'🖊️',desc:'钢笔签合同，奖杯摆满桌。'},
+  {a:'pen',b:'mask',job:'枪手',emoji:'👻',desc:'戴着面具执笔，谁也不知道作者是谁。'},
+  {a:'pen',b:'wine',job:'文案总监',emoji:'🍸',desc:'喝杯红酒找灵感，写出来的都是金句。'},
+  {a:'sofa',b:'parcel',job:'代收点老板',emoji:'🏪',desc:'沙发上坐着收快递，躺赚就是这么来的。'},
+  {a:'sofa',b:'calendar',job:'退休领导',emoji:'👴',desc:'沙发上翻日历，每天都是周末。'},
+  {a:'stamp',b:'scissors',job:'办公室刺客',emoji:'🗡️',desc:'盖完章就裁人，一气呵成。'},
+  {a:'stamp',b:'horn',job:'政委',emoji:'📯',desc:'印章在手喇叭在口，传达精神是本职。'},
+  {a:'pot',b:'mask',job:'背锅侠',emoji:'🦹',desc:'戴着面具背着锅，默默承受一切。'},
+  {a:'pot',b:'phone',job:'外卖店老板',emoji:'🍜',desc:'锅里炒菜电话响——外卖又来单了。'},
+  {a:'vase',b:'gift',job:'花艺师',emoji:'💐',desc:'花瓶插花包装好，一束花卖三百八。'},
+  {a:'umbrella',b:'wine',job:'酒吧老板',emoji:'🍹',desc:'雨天撑伞去酒吧，别人喝酒我数钱。'},
+  {a:'fan',b:'tie',job:'国风网红',emoji:'🧧',desc:'折扇配领带，国潮风拿捏了。'},
+  {a:'fan',b:'camera',job:'综艺导演',emoji:'🎬',desc:'扇子一摇镜头一转，下一个节目开始。'},
+  {a:'fan',b:'note',job:'编剧',emoji:'🎭',desc:'扇着扇子写剧本，灵感全在手腕上。'},
+  {a:'fan',b:'coffee',job:'相声演员',emoji:'🎙️',desc:'折扇配咖啡，说学逗唱新时代。'},
+  {a:'abacus',b:'chart',job:'精算师',emoji:'🔢',desc:'算盘打图表看，保险公司的隐藏BOSS。'},
+  {a:'abacus',b:'calendar',job:'薪酬专员',emoji:'💵',desc:'算盘+日历=每月最重要的那一天。'},
+  {a:'abacus',b:'scissors',job:'成本杀手',emoji:'🔪',desc:'算盘一响剪刀一挥，预算砍到骨头里。'},
+  {a:'abacus',b:'phone',job:'催债专员',emoji:'💸',desc:'算盘算完打电话——您的账单已逾期。'},
+  {a:'folder',b:'calendar',job:'档案管理员',emoji:'🗄️',desc:'文件夹+日历=每份文件都有归宿。'},
+  {a:'folder',b:'horn',job:'新闻发言人',emoji:'🎙️',desc:'拿着文件夹对着喇叭念，官方口径一字不差。'},
+  {a:'folder',b:'gift',job:'采购专员',emoji:'🛍️',desc:'文件夹里是报价单，礼品是供应商送的（不是）。'},
+  {a:'folder',b:'monitor',job:'文档工程师',emoji:'💾',desc:'文件夹搬到屏幕上，纸质时代的终结者。'},
+  {a:'vase',b:'trophy',job:'展厅设计师',emoji:'🏛️',desc:'花瓶和奖杯怎么摆，学问大着呢。'},
+  {a:'vase',b:'pen',job:'书法家',emoji:'🖌️',desc:'花瓶插笔，案头清供，写字是修行。'},
+  {a:'parcel',b:'horn',job:'物流调度',emoji:'🚛',desc:'快递到了喊一嗓子，整栋楼都听见了。'},
+];
+const jobRecipeLookup={};
+JOB_RECIPES.forEach(r=>{r.key=[r.a,r.b].sort().join('+');jobRecipeLookup[r.key]=r});
+
+const EASTER_EGGS={};
+[
+  ['coffee','pot','恭喜你发明了……煮咖啡？这不需要合成台。'],
+  ['vase','wine','你是来插花还是来喝酒的？下班了再说。'],
+  ['gift','parcel','快递套礼品，礼品套快递，俄罗斯套娃是吧？'],
+  ['bug','pot','虫子下锅了……这是荒野求生还是办公室？'],
+  ['key','stamp','钥匙配印章？你是想私刻公章吗？已报警。'],
+  ['fan','umbrella','一手伞一手扇，你到底是热还是冷？'],
+  ['sofa','tie','领带往沙发上一甩——你这是下班了吧？'],
+  ['pen','scissors','拿剪刀削钢笔？这是什么年代的操作？'],
+  ['coffee','wine','红酒兑咖啡？你的胃在发出警告。'],
+  ['bug','wine','虫子掉进红酒里了！服务员——退货！'],
+  ['bug','gift','把虫子包装成礼物？你是要恶作剧吗？'],
+  ['pot','trophy','拿锅当奖杯？比赛项目是：炒菜。'],
+  ['monitor','umbrella','给显示器撑把伞？你是怕它淋雨吗？'],
+  ['bug','sofa','沙发上有虫子！快叫除虫公司！'],
+  ['paint','wine','颜料兑红酒……这幅画有酒香味。'],
+  ['pot','vase','花瓶+锅=花盆？去找园艺部门吧。'],
+  ['fan','stamp','扇着扇子盖印章，你当自己是知县大人？'],
+  ['horn','mask','喇叭配面具——你是想当匿名广播员吗？'],
+  ['calendar','trophy','日历上圈了发奖日期，但奖杯不是给你的。'],
+  ['keyboard','sofa','键盘放沙发上敲？这就是传说中的躺平式办公。'],
+  ['pie','stamp','饼上盖个章就是官方认证的饼了？格局打开。'],
+  ['scissors','wine','剪刀开红酒——你是不是找不到开瓶器？'],
+  ['coffee','scissors','咖啡加剪刀？你打算剪掉加班时间吗？'],
+  ['parcel','tie','快递里是领带？上班第一天从拆快递开始。'],
+  ['pot','pen','锅里插钢笔？是行为艺术还是精神状态不好？'],
+].forEach(([a,b,msg])=>{EASTER_EGGS[[a,b].sort().join('+')]=msg});
+
+const GENERIC_FAILS=[
+  '这两样东西互相看了一眼，默默走开了。',
+  '合成炉表示：就这？',
+  '恭喜你发现了一个无效组合！收藏它吧（并不能）。',
+  '你是认真的吗？这俩根本不搭啊。',
+  '建议你多去几个房间逛逛再来。',
+  '合成失败。不是所有的相遇都有结果。',
+  '叮——什么都没发生，但你失去了三秒钟。',
+  '这个组合太前卫了，系统还没准备好。',
+  '也许在平行宇宙里，这个组合能成功。',
+  '两个物品在合成台上躺了一会儿，觉得没意思，走了。',
+  '系统检测到你在瞎试——没关系，大家都是这么过来的。',
+  '这不是合成，这是摆烂。',
+];
+
+const TOTAL=ITEM_RECIPES.length+JOB_RECIPES.length;
+
+// ==================== STATE ====================
+let S={currentRoom:0,revealed:[],discoveredItems:[],discoveredJobs:[],slots:[null,null],codexFilter:'all'};
+function load(){try{const d=JSON.parse(localStorage.getItem('jcv21'));if(d){S.revealed=d.revealed||[];S.discoveredItems=d.discoveredItems||[];S.discoveredJobs=d.discoveredJobs||[]}}catch(e){}}
+function save(){localStorage.setItem('jcv21',JSON.stringify({revealed:S.revealed,discoveredItems:S.discoveredItems,discoveredJobs:S.discoveredJobs}))}
+
+// ==================== HELPERS ====================
+function jobCount(){return S.discoveredJobs.length}
+function isUnlocked(room){return jobCount()>=room.unlockAt}
+function isRevealed(id){return S.revealed.includes(id)}
+function isSynthOwned(id){return ITEM_RECIPES.some(r=>r.result===id&&S.discoveredItems.includes(r.key))}
+function canUseItem(id){const it=itemMap[id];if(!it)return false;if(it.isSynth)return isSynthOwned(id);return isRevealed(id)}
+function getRoomItems(roomId){
+  const base=BASE_ITEMS.filter(i=>i.room===roomId);
+  const synth=SYNTH_ITEMS.filter(i=>i.room===roomId&&isSynthOwned(i.id));
+  return[...base,...synth];
+}
+
+// ==================== TOAST ====================
+let _toastTimer;
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(type==='warn'?' warn':'');
+  clearTimeout(_toastTimer);
+  requestAnimationFrame(()=>{t.classList.add('show');_toastTimer=setTimeout(()=>t.classList.remove('show'),1600)});
+}
+
+// ==================== RENDER ====================
+function renderRoom(){
+  const room=ROOMS[S.currentRoom];
+  document.getElementById('roomTitle').innerHTML=room.emoji+' '+room.name+' <span style="font-size:.72em;opacity:.5">🗺️</span>';
+  document.getElementById('roomDots').innerHTML=ROOMS.map((_,i)=>{
+    const r=ROOMS[i];const u=isUnlocked(r);
+    let cls='room-dot';if(i===S.currentRoom)cls+=' active';if(!u)cls+=' locked';
+    return`<span class="${cls}"></span>`;
+  }).join('');
+  document.getElementById('btnPrev').classList.toggle('disabled',S.currentRoom===0);
+  document.getElementById('btnNext').classList.toggle('disabled',S.currentRoom===ROOMS.length-1);
+
+  const container=document.getElementById('roomContainer');
+  // Build scene
+  const items=getRoomItems(room.id);
+  let html=`<div class="room-scene" id="roomScene">`;
+  html+=`<div class="scene-bg ${room.id}"></div>`;
+  html+=(ROOM_DECOS[room.id]||'');
+  items.forEach(it=>{
+    const style=`top:${it.y}%;left:${it.x}%`;
+    if(it.isSynth){
+      const sel=S.slots.includes(it.id)?'selected':'';
+      html+=`<div class="item-card revealed synth-item ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji">${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+    }else if(!isRevealed(it.id)){
+      html+=`<div class="item-card hidden-item" style="${style}" onclick="revealItem('${it.id}',this)"><span class="discover-hint">❓</span><span class="item-emoji">${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+    }else{
+      const sel=S.slots.includes(it.id)?'selected':'';
+      html+=`<div class="item-card revealed ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji">${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+    }
+  });
+  html+=`</div>`;
+  container.innerHTML=html;
+}
+
+function renderSlots(){
+  for(let i=0;i<2;i++){
+    const el=document.getElementById('cs'+i);
+    if(S.slots[i]){
+      const it=itemMap[S.slots[i]];
+      el.className='c-slot filled';
+      el.innerHTML=`<span class="cs-emoji">${it.emoji}</span><span class="cs-name">${it.name}</span>`;
+    }else{
+      el.className='c-slot';
+      el.innerHTML=`<span style="font-size:1em">${['①','②'][i]}</span>`;
+    }
+  }
+  document.getElementById('craftBtn').disabled=S.slots.filter(Boolean).length<2;
+}
+
+function renderCodex(){
+  const found=S.discoveredItems.length+S.discoveredJobs.length;
+  document.getElementById('codexCount').textContent=found+'/'+TOTAL;
+  document.getElementById('codexProgressFill').style.width=(found/TOTAL*100)+'%';
+  const tabs=[{id:'all',l:'全部'},{id:'base',l:'基础物品'},{id:'synth',l:'合成物品'},{id:'job',l:'岗位'}];
+  document.getElementById('codexTabs').innerHTML=tabs.map(t=>
+    `<button class="codex-tab ${S.codexFilter===t.id?'active':''}" onclick="setCodexFilter('${t.id}')">${t.l}</button>`
+  ).join('');
+  let items=[];const f=S.codexFilter;
+  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,name:it.name,locked:!isRevealed(it.id),type:'base',data:it}));
+  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.name,locked:!S.discoveredItems.includes(r.key),type:'synth',data:r}));
+  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.job,locked:!S.discoveredJobs.includes(r.key),type:'job',data:r}));
+  window._cItems=items;
+  document.getElementById('codexGrid').innerHTML=items.map((it,i)=>{
+    const cls=it.locked?'codex-item locked':'codex-item';
+    const e=it.locked?'❓':it.emoji;const n=it.locked?'???':it.name;
+    const oc=it.locked?'':`onclick="showCodexDetail(${i})"`;
+    return`<div class="${cls}" ${oc}><span class="ci-emoji">${e}</span>${n}</div>`;
+  }).join('');
+}
+
+// ==================== ACTIONS ====================
+function revealItem(id,el){
+  if(isRevealed(id))return;
+  S.revealed.push(id);save();
+  el.classList.add('discovering');
+  const it=itemMap[id];
+  showToast(it.emoji+' '+it.name+' 发现！');
+  setTimeout(()=>renderRoom(),500);
+  renderCodex();
+}
+
+function toggleSelect(id){
+  if(!canUseItem(id))return;
+  const idx=S.slots.indexOf(id);
+  if(idx>=0){S.slots[idx]=null;const f=S.slots.filter(Boolean);S.slots=[f[0]||null,f[1]||null]}
+  else{for(let i=0;i<2;i++){if(!S.slots[i]){S.slots[i]=id;break}}}
+  renderRoom();renderSlots();
+}
+
+function removeCraftSlot(i){
+  if(!S.slots[i])return;
+  S.slots[i]=null;const f=S.slots.filter(Boolean);S.slots=[f[0]||null,f[1]||null];
+  renderRoom();renderSlots();
+}
+function clearCraft(){S.slots=[null,null];renderRoom();renderSlots()}
+
+function prevRoom(){
+  if(S.currentRoom<=0)return;
+  const el=document.getElementById('roomScene');
+  if(!el)return;
+  el.classList.add('slide-out-right');
+  setTimeout(()=>{S.currentRoom--;
+    if(!isUnlocked(ROOMS[S.currentRoom])){showToast('🔒 '+ROOMS[S.currentRoom].unlockText,'warn');S.currentRoom++;renderRoom();return}
+    renderRoom();renderSlots();
+  },200);
+}
+function nextRoom(){
+  if(S.currentRoom>=ROOMS.length-1)return;
+  const el=document.getElementById('roomScene');
+  if(!el)return;
+  el.classList.add('slide-out-left');
+  setTimeout(()=>{S.currentRoom++;
+    if(!isUnlocked(ROOMS[S.currentRoom])){showToast('🔒 '+ROOMS[S.currentRoom].unlockText,'warn');S.currentRoom--;renderRoom();return}
+    renderRoom();renderSlots();
+  },200);
+}
+
+function doCraft(){
+  const a=S.slots[0],b=S.slots[1];if(!a||!b)return;
+  const key=[a,b].sort().join('+');
+  const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
+  const ir=itemRecipeLookup[key];
+  if(ir){
+    const isNew=!S.discoveredItems.includes(key);
+    if(isNew){S.discoveredItems.push(key);save()}
+    const formula=itemMap[ir.a].emoji+itemMap[ir.a].name+' + '+itemMap[ir.b].emoji+itemMap[ir.b].name;
+    card.innerHTML=`<div class="p-emoji">${ir.emoji}</div><div class="p-title">${ir.name}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新物品合成！':'✅ 已合成过'}</div><div class="p-desc">${ir.desc}</div><button onclick="closeOv()">继续</button>`;
+    ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();renderCodex();checkUnlocks();return;
+  }
+  const jr=jobRecipeLookup[key];
+  if(jr){
+    const isNew=!S.discoveredJobs.includes(key);
+    if(isNew){S.discoveredJobs.push(key);save()}
+    const formula=itemMap[jr.a].emoji+itemMap[jr.a].name+' + '+itemMap[jr.b].emoji+itemMap[jr.b].name;
+    card.innerHTML=`<div class="p-emoji">${jr.emoji}</div><div class="p-title">${jr.job}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新岗位解锁！':'✅ 已解锁过'}</div><div class="p-desc">${jr.desc.replace(/\n/g,'<br>')}</div><button onclick="closeOv()">继续</button>`;
+    ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();renderCodex();checkUnlocks();return;
+  }
+  const egg=EASTER_EGGS[key];
+  const failMsg=egg||GENERIC_FAILS[Math.floor(Math.random()*GENERIC_FAILS.length)];
+  card.innerHTML=`<div class="p-emoji">${egg?'🥚':'💨'}</div><div class="p-fail">${egg?'彩蛋！':'合成失败'}</div><div class="p-formula">${itemMap[a].emoji} + ${itemMap[b].emoji}</div><div class="p-egg">${failMsg}</div><button onclick="closeOv()">再试试</button>`;
+  ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();
+}
+
+let _unlockState={};
+function checkUnlocks(){
+  const jc=jobCount();
+  ROOMS.forEach(r=>{
+    if(r.unlockAt>0&&jc>=r.unlockAt&&!_unlockState[r.id]){
+      _unlockState[r.id]=true;
+      setTimeout(()=>showToast('🔓 '+r.emoji+' '+r.name+' 已解锁！','warn'),500);
+    }
   });
 }
+function initUnlocks(){ROOMS.forEach(r=>{if(r.unlockAt>0&&jobCount()>=r.unlockAt)_unlockState[r.id]=true})}
 
-function renderSlots() {
-  for (let i = 0; i < 3; i++) {
-    const el = document.getElementById('slot' + i);
-    if (slots[i]) {
-      const item = itemMap[slots[i]];
-      el.className = 'slot filled';
-      el.innerHTML = `<span class="emoji">${item.emoji}</span><span>${item.name}</span><span class="remove-hint">×</span>`;
-    } else {
-      el.className = 'slot';
-      el.innerHTML = `<span style="font-size:1.5em">${['①','②','③'][i]}</span>`;
-    }
-  }
-  // Highlight items in grid
-  ITEMS.forEach(item => {
-    const el = document.getElementById('item_' + item.id);
-    if (el) el.classList.toggle('selected-highlight', slots.includes(item.id));
-  });
-  // Enable craft button
-  const count = slots.filter(Boolean).length;
-  document.getElementById('craftBtn').disabled = count < 2;
+function showHint(){
+  const owned=[];
+  BASE_ITEMS.forEach(i=>{if(isRevealed(i.id))owned.push(i.id)});
+  SYNTH_ITEMS.forEach(i=>{if(isSynthOwned(i.id))owned.push(i.id)});
+  let hint='';
+  const possI=ITEM_RECIPES.filter(r=>!S.discoveredItems.includes(r.key)&&owned.includes(r.a)&&owned.includes(r.b));
+  const possJ=JOB_RECIPES.filter(r=>!S.discoveredJobs.includes(r.key)&&owned.includes(r.a)&&owned.includes(r.b));
+  if(possI.length>0){const r=possI[Math.floor(Math.random()*possI.length)];hint=`试试把 ${itemMap[r.a].emoji}${itemMap[r.a].name} 和 ${itemMap[r.b].emoji}${itemMap[r.b].name} 放在一起……`}
+  else if(possJ.length>0){const r=possJ[Math.floor(Math.random()*possJ.length)];const h=[`试试 ${itemMap[r.a].emoji} 和 ${itemMap[r.b].emoji} 组合……`,`有个岗位叫「${r.job}」，猜猜需要什么？`,`${itemMap[r.a].emoji} 和某样东西能合出一个岗位……`];hint=h[Math.floor(Math.random()*h.length)]}
+  else if(owned.length<ALL_ITEMS.length){
+    const unrev=BASE_ITEMS.filter(i=>!isRevealed(i.id)&&isUnlocked(ROOMS.find(r=>r.id===i.room)));
+    if(unrev.length>0)hint='还有物品没发现，多点点房间里的问号！';
+    else{const lr=ROOMS.filter(r=>!isUnlocked(r));if(lr.length>0)hint=`还有${lr.length}个房间没解锁，多合成岗位试试！`;else hint='多试试不同组合吧！'}
+  }else{const rem=TOTAL-S.discoveredItems.length-S.discoveredJobs.length;hint=rem>0?`还有${rem}个配方等你发现！`:'🎊 全部解锁！你是办公室炼金术大师！'}
+  const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
+  card.innerHTML=`<div class="p-emoji">💡</div><div class="p-title">提示</div><div class="p-desc">${hint}</div><button onclick="closeOv()">知道了</button>`;
+  ov.classList.add('show');
 }
 
-function renderProgress() {
-  const total = RECIPES.length;
-  const found = discovered.length;
-  const pct = total > 0 ? (found / total * 100) : 0;
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressText').textContent = `已解锁 ${found} / ${total} 个岗位`;
+function openCodex(){renderCodex();document.getElementById('codexOverlay').classList.add('show')}
+function closeCodex(){document.getElementById('codexOverlay').classList.remove('show')}
+function setCodexFilter(f){S.codexFilter=f;renderCodex()}
+
+// ==================== COMPANY MAP ====================
+// 平面图布局：上排 研发室|市场室，中排 职能室|老板办公室，底排 前台(正门入口)
+const MAP_LAYOUT=['lab','market','admin','boss','front'];
+function renderMap(){
+  document.getElementById('mapPlan').innerHTML=MAP_LAYOUT.map(id=>{
+    const idx=ROOMS.findIndex(x=>x.id===id);const r=ROOMS[idx];const u=isUnlocked(r);
+    const base=BASE_ITEMS.filter(i=>i.room===id);
+    const syn=ITEM_RECIPES.filter(x=>x.room===id);
+    const found=base.filter(i=>isRevealed(i.id)).length+syn.filter(x=>S.discoveredItems.includes(x.key)).length;
+    let cls='map-room';
+    if(idx===S.currentRoom)cls+=' cur';
+    if(!u)cls+=' locked';
+    if(id==='front')cls+=' entrance';
+    const inner=u
+      ?`<span class="mr-emoji">${r.emoji}</span><span class="mr-name">${r.name}</span><span class="mr-count">物品 ${found}/${base.length+syn.length}</span>`
+      :`<span class="mr-emoji">🔒</span><span class="mr-name">${r.name}</span><span class="mr-count">${r.unlockText}</span>`;
+    return`<div class="${cls}" onclick="mapGoto(${idx})">${inner}<span class="map-door"></span></div>`;
+  }).join('');
+}
+function mapGoto(idx){
+  const r=ROOMS[idx];
+  if(!isUnlocked(r)){showToast('🔒 '+r.unlockText,'warn');return}
+  S.currentRoom=idx;closeMap();renderRoom();renderSlots();
+}
+function openMap(){renderMap();document.getElementById('mapOverlay').classList.add('show')}
+function closeMap(){document.getElementById('mapOverlay').classList.remove('show')}
+
+function showCodexDetail(idx){
+  const it=window._cItems[idx];if(!it||it.locked)return;
+  const ov=document.getElementById('detailOverlay'),card=document.getElementById('detailCard');
+  let formula='',desc='';
+  if(it.type==='base'){const rm=ROOMS.find(r=>r.id===it.data.room);desc='来自：'+(rm?rm.emoji+' '+rm.name:'未知')}
+  else if(it.type==='synth'){formula=itemMap[it.data.a].emoji+itemMap[it.data.a].name+' + '+itemMap[it.data.b].emoji+itemMap[it.data.b].name;desc=it.data.desc}
+  else if(it.type==='job'){formula=itemMap[it.data.a].emoji+itemMap[it.data.a].name+' + '+itemMap[it.data.b].emoji+itemMap[it.data.b].name;desc=it.data.desc.replace(/\n/g,'<br>')}
+  card.innerHTML=`<div class="p-emoji">${it.emoji}</div><div class="p-title">${it.name}</div>${formula?`<div class="p-formula">${formula}</div>`:''}<div class="p-desc">${desc}</div><button onclick="closeOv2()">关闭</button>`;
+  ov.classList.add('show');
+  document.getElementById('codexOverlay').classList.remove('show');
 }
 
-function renderCollection() {
-  const grid = document.getElementById('collectionGrid');
-  grid.innerHTML = '';
-  RECIPES.forEach(r => {
-    if (discovered.includes(r.key)) {
-      const card = document.createElement('div');
-      card.className = 'job-card';
-      const formulaMini = r.inputs.map(id => itemMap[id].emoji).join(' + ');
-      card.innerHTML = `<span class="job-emoji">${r.emoji}</span>
-        <div class="job-name">${r.job}</div>
-        <div class="job-formula-mini">${formulaMini}</div>`;
-      card.onclick = () => showDetail(r);
-      grid.appendChild(card);
-    } else {
-      const card = document.createElement('div');
-      card.className = 'job-card-unknown';
-      card.innerHTML = '❓';
-      grid.appendChild(card);
-    }
-  });
-  document.getElementById('collCount').textContent = '';
-}
+function closeOverlay(e){if(e.target.classList.contains('overlay'))e.target.classList.remove('show')}
+function closeOv(){document.getElementById('resultOverlay').classList.remove('show')}
+function closeOv2(){document.getElementById('detailOverlay').classList.remove('show')}
 
-// === ACTIONS ===
-function addToSlot(itemId) {
-  // Find first empty slot
-  for (let i = 0; i < 3; i++) {
-    if (slots[i] === null) {
-      slots[i] = itemId;
-      renderSlots();
-      return;
-    }
-  }
-  // All full, do nothing
-}
+// Touch swipe
+let _tx=0;
+document.querySelector('.room-container').addEventListener('touchstart',e=>{_tx=e.touches[0].clientX},{passive:true});
+document.querySelector('.room-container').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-_tx;if(Math.abs(dx)>50){dx>0?prevRoom():nextRoom()}},{passive:true});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')prevRoom();if(e.key==='ArrowRight')nextRoom()});
 
-function removeSlot(i) {
-  if (slots[i]) {
-    slots[i] = null;
-    // Compact: move items left
-    const filled = slots.filter(Boolean);
-    slots = [filled[0] || null, filled[1] || null, filled[2] || null];
-    renderSlots();
-  }
-}
-
-function clearSlots() {
-  slots = [null, null, null];
-  renderSlots();
-  // Also hide hint
-  document.getElementById('hintText').classList.remove('show');
-}
-
-function craft() {
-  const used = slots.filter(Boolean);
-  if (used.length < 2) return;
-
-  const key = [...used].sort().join('+');
-  const recipe = recipeLookup[key];
-
-  const overlay = document.getElementById('resultOverlay');
-  const card = document.getElementById('resultCard');
-
-  if (recipe) {
-    const isNew = !discovered.includes(key);
-    if (isNew) {
-      discovered.push(key);
-      localStorage.setItem('jobcraft_discovered', JSON.stringify(discovered));
-    }
-    const formula = recipe.inputs.map(id => `${itemMap[id].emoji}${itemMap[id].name}`).join(' + ');
-    card.innerHTML = `
-      <div class="result-emoji">${recipe.emoji}</div>
-      <div class="result-title">${recipe.job}</div>
-      <div class="result-formula">${formula}</div>
-      <div class="${isNew ? 'result-new' : 'result-dup'}">${isNew ? '🎉 新岗位解锁！' : '✅ 已解锁过'}</div>
-      <div class="result-desc">${recipe.desc.replace(/\n/g, '<br>')}</div>
-      <button onclick="closeResultBtn()">继续合成</button>
-    `;
-    renderProgress();
-    renderCollection();
-  } else {
-    const usedEmojis = used.map(id => itemMap[id].emoji).join(' + ');
-    const fails = [
-      '这几样东西放在一起……什么也没发生。',
-      '合成失败！也许换个组合试试？',
-      '嗯……这个组合暂时合成不了任何岗位。',
-      '叮——合成炉冒了一阵烟，什么都没出来。',
-      '这些物品面面相觑，拒绝合体。',
-    ];
-    const failMsg = fails[Math.floor(Math.random() * fails.length)];
-    card.innerHTML = `
-      <div class="result-emoji">💨</div>
-      <div class="fail-text">合成失败</div>
-      <div class="result-formula">${usedEmojis}</div>
-      <div class="fail-hint">${failMsg}</div>
-      <button onclick="closeResultBtn()">再试试</button>
-    `;
-  }
-
-  overlay.classList.add('show');
-  slots = [null, null, null];
-  renderSlots();
-}
-
-function closeResult(e) {
-  if (e.target === document.getElementById('resultOverlay')) {
-    document.getElementById('resultOverlay').classList.remove('show');
-  }
-}
-function closeResultBtn() {
-  document.getElementById('resultOverlay').classList.remove('show');
-}
-
-function showDetail(recipe) {
-  const overlay = document.getElementById('detailOverlay');
-  const card = document.getElementById('detailCard');
-  const formula = recipe.inputs.map(id => `${itemMap[id].emoji}${itemMap[id].name}`).join(' + ');
-  card.innerHTML = `
-    <div class="result-emoji">${recipe.emoji}</div>
-    <div class="result-title">${recipe.job}</div>
-    <div class="result-formula">${formula}</div>
-    <div class="result-desc">${recipe.desc.replace(/\n/g, '<br>')}</div>
-    <button onclick="closeDetailBtn()">关闭</button>
-  `;
-  overlay.classList.add('show');
-}
-function closeDetail(e) {
-  if (e.target === document.getElementById('detailOverlay')) {
-    document.getElementById('detailOverlay').classList.remove('show');
-  }
-}
-function closeDetailBtn() {
-  document.getElementById('detailOverlay').classList.remove('show');
-}
-
-// Hint system
-function showHint() {
-  const undiscovered = RECIPES.filter(r => !discovered.includes(r.key));
-  const hintEl = document.getElementById('hintText');
-  if (undiscovered.length === 0) {
-    hintEl.textContent = '🎊 你已经解锁了所有岗位！太厉害了！';
-    hintEl.classList.add('show');
-    return;
-  }
-  const recipe = undiscovered[Math.floor(Math.random() * undiscovered.length)];
-  // Show partial hint
-  const hints = [
-    `试试把 ${itemMap[recipe.inputs[0]].emoji}${itemMap[recipe.inputs[0]].name} 和其他东西组合看看……`,
-    `${recipe.job}需要 ${recipe.inputs.length} 样材料，其中有 ${itemMap[recipe.inputs[recipe.inputs.length - 1]].emoji}……`,
-    `想想什么岗位和 ${itemMap[recipe.inputs[0]].emoji} 有关？`,
-    `有个岗位叫「${recipe.job}」，猜猜需要什么材料？`,
-  ];
-  hintEl.textContent = '💡 ' + hints[Math.floor(Math.random() * hints.length)];
-  hintEl.classList.add('show');
-}
-
-// === INIT ===
-renderItems();
-renderSlots();
-renderProgress();
-renderCollection();
+// ==================== INIT ====================
+load();initUnlocks();renderRoom();renderSlots();renderCodex();
 </script>
 </body>
 </html>
