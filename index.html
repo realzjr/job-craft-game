@@ -334,7 +334,7 @@ function save(){localStorage.setItem(SAVE_KEY,JSON.stringify({revealed:S.reveale
 
 // ==================== HELPERS ====================
 function jobCount(){return S.discoveredJobs.length}
-function isUnlocked(room){return jobCount()>=room.unlockAt}
+function isUnlocked(room){return EDIT||jobCount()>=room.unlockAt}
 function isRevealed(id){return S.revealed.includes(id)}
 function isSynthOwned(id){return ITEM_RECIPES.some(r=>r.result===id&&S.discoveredItems.includes(r.key))}
 function canUseItem(id){const it=itemMap[id];if(!it)return false;if(it.isSynth)return isSynthOwned(id);return isRevealed(id)}
