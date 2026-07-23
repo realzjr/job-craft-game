@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>岗位合成器 - 办公室炼金术</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#0f172a;min-height:100vh;min-height:100dvh;color:#e2e8f0;overflow:hidden;display:flex;flex-direction:column}
+
+/* ===== ROOM AREA ===== */
+.room-area{flex:1;display:flex;flex-direction:column;padding:4px 8px 0;overflow:hidden}
+.room-nav{display:flex;align-items:center;justify-content:space-between;padding:4px 0;user-select:none}
+.arrow-btn{width:36px;height:36px;border-radius:10px;border:1.5px solid #475569;background:#1e293b;color:#94a3b8;font-size:1.2em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.arrow-btn:hover{border-color:#818cf8;color:#818cf8}
+.arrow-btn:active{transform:scale(.92)}
+.arrow-btn.disabled{opacity:.25;cursor:not-allowed}
+.room-title-area{text-align:center;flex:1}
+.room-title{font-size:1.05em;font-weight:700}
+.room-dots{display:flex;gap:5px;justify-content:center;margin-top:3px}
+.room-dot{width:7px;height:7px;border-radius:50%;background:#334155;transition:all .3s}
+.room-dot.active{background:#818cf8;width:18px;border-radius:4px}
+.room-dot.locked{background:#1e293b;border:1px solid #334155}
+
+/* Scene container */
+.room-container{flex:1;position:relative;overflow:hidden;border-radius:16px;margin:4px 0}
+.room-scene{position:absolute;inset:0;transition:opacity .25s,transform .25s;border-radius:16px;overflow:hidden}
+.room-scene.slide-out-left{opacity:0;transform:translateX(-60px)}
+.room-scene.slide-out-right{opacity:0;transform:translateX(60px)}
+
+/* ===== ROOM SCENES: walls / floors / furniture ===== */
+/* 每个房间 = 墙面(上55%) + 地板(下45%)，家具用 .f 绝对定位，道具卡片按家具位置摆放 */
+.scene-bg{position:absolute;inset:0;z-index:0}
+.f{position:absolute;z-index:1;pointer-events:none}
+
+/* ---- 前台 reception: 入口玻璃门 + 接待台 + 钥匙挂板 + 伞架 + 收货区 ---- */
+.scene-bg.front{background:linear-gradient(180deg,#f5e6c8 0%,#eed6a3 54%,#b98a5e 54.5%,#8a5a3b 100%)}
+.scene-bg.front::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 11%,rgba(0,0,0,.08) 11% 11.6%),repeating-linear-gradient(180deg,transparent 0 22%,rgba(0,0,0,.05) 22% 23%)}
+.scene-bg.front::after{content:'';position:absolute;top:43%;left:0;right:0;height:1.6%;background:#d9b075;box-shadow:0 2px 3px rgba(0,0,0,.12)}
+.f.front-door{top:8%;left:4%;width:20%;height:47%;border:3px solid #8a6d3b;border-radius:6px 6px 0 0;background:linear-gradient(90deg,rgba(147,197,253,.4) 0 48.5%,#8a6d3b 48.5% 51.5%,rgba(147,197,253,.4) 51.5%)}
+.f.front-door::before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.45) 45%,transparent 60%)}
+.f.front-door::after{content:'推';position:absolute;top:46%;left:55%;font-size:.55em;color:#6b512b}
+.f.front-mat{top:56.5%;left:5%;width:18%;height:5.5%;background:#7f1d1d;border-radius:4px;opacity:.75;display:flex;align-items:center;justify-content:center;color:#fca5a5;font-size:.48em;letter-spacing:2px}
+.f.front-logo{top:6%;left:32%;width:36%;height:8.5%;background:linear-gradient(135deg,#818cf8,#c084fc);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.78em;letter-spacing:1px;box-shadow:0 3px 8px rgba(0,0,0,.2)}
+.f.front-clock{top:6.5%;left:71%;font-size:1.6em}
+.f.front-counter{top:45%;left:30%;width:48%;height:17%;background:linear-gradient(180deg,#eab308 0 10%,#a16207 10% 100%);border-radius:8px 8px 0 0;box-shadow:0 5px 12px rgba(0,0,0,.25)}
+.f.front-counter::after{content:'RECEPTION';position:absolute;top:52%;left:50%;transform:translateX(-50%);font-size:.5em;color:#fde68a;letter-spacing:3px}
+.f.front-keyrack{top:17%;left:79%;width:18%;height:16%;background:#8a6d3b;border:2px solid #6b512b;border-radius:4px}
+.f.front-keyrack::before{content:'🪝🪝🪝';position:absolute;bottom:5%;left:50%;transform:translateX(-50%);font-size:.55em;letter-spacing:2px}
+.f.front-shelf{top:45%;left:78%;width:19%;height:2%;background:#8a6d3b;border-radius:2px;box-shadow:0 3px 5px rgba(0,0,0,.25)}
+.f.front-stand{top:60%;left:5%;width:8%;height:14%;background:linear-gradient(180deg,#475569,#334155);border:2px solid #1e293b;border-radius:3px 3px 6px 6px}
+.f.front-tape{top:66%;left:16%;width:40%;height:17%;border:2px dashed rgba(180,84,10,.55);border-radius:8px}
+.f.front-tape::after{content:'📦 收货区';position:absolute;bottom:4%;right:5%;font-size:.55em;color:rgba(120,53,15,.7)}
+.f.front-plant{top:51%;left:88%;font-size:2.1em}
+
+/* ---- 职能室 admin: 档案柜 + 白板 + 公告栏 + 办公桌 + 茶水角 ---- */
+.scene-bg.admin{background:linear-gradient(180deg,#dde6f2 0%,#cbd6e8 54%,#8e9bb3 54.5%,#6e7d97 100%)}
+.scene-bg.admin::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 24%,rgba(255,255,255,.08) 24% 25%),repeating-linear-gradient(180deg,transparent 0 30%,rgba(0,0,0,.07) 30% 31%)}
+.f.admin-cabinet{top:16%;left:3%;width:17%;height:46%;background:linear-gradient(180deg,#9fb0c4,#6c7d94);border:2px solid #51617a;border-radius:4px 4px 0 0}
+.f.admin-cabinet::before{content:'';position:absolute;inset:5% 9%;background:repeating-linear-gradient(180deg,transparent 0 18%,rgba(20,30,50,.25) 18% 20%,transparent 20% 25%)}
+.f.admin-cabinet::after{content:'档案';position:absolute;top:2%;left:50%;transform:translateX(-50%);font-size:.5em;color:#33415e;letter-spacing:2px}
+.f.admin-drawer{top:44%;left:4%;width:20%;height:6%;background:#8496ad;border:2px solid #51617a;border-radius:2px;box-shadow:0 5px 8px rgba(0,0,0,.3)}
+.f.admin-board{top:7%;left:26%;width:22%;height:17%;background:#fff;border:3px solid #94a3b8;border-radius:3px}
+.f.admin-board::before{content:'';position:absolute;inset:12% 8%;background:repeating-linear-gradient(180deg,transparent 0 30%,rgba(100,116,139,.35) 30% 32%),repeating-linear-gradient(90deg,transparent 0 13%,rgba(100,116,139,.35) 13% 14%)}
+.f.admin-cork{top:7%;left:52%;width:26%;height:16%;background:#c8a06a;border:4px solid #8a6d3b;border-radius:3px}
+.f.admin-cork::before{content:'📌';position:absolute;top:4%;right:4%;font-size:.7em}
+.f.admin-frame{top:8%;left:81%;width:15%;height:13%;border:3px solid #8a6d3b;background:#f5f0e6;transform:rotate(2deg);box-shadow:0 3px 6px rgba(0,0,0,.15)}
+.f.admin-chair{top:36%;left:41%;width:14%;height:11%;background:#33415e;border-radius:8px 8px 0 0}
+.f.admin-desk{top:45%;left:25%;width:50%;height:17%;background:linear-gradient(180deg,#d6bb92 0 10%,#8a6d3b 10%);border-radius:6px 6px 0 0;box-shadow:0 5px 12px rgba(0,0,0,.22)}
+.f.admin-desk::before{content:'';position:absolute;top:18%;right:6%;width:26%;height:72%;background:rgba(0,0,0,.18);border-radius:3px}
+.f.admin-pantry{top:41%;left:78%;width:19%;height:21%;background:linear-gradient(180deg,#e2e8f0 0 8%,#94a3b8 8%);border:2px solid #64748b;border-radius:6px 6px 0 0}
+.f.admin-pantry::before{content:'茶水角';position:absolute;bottom:8%;left:50%;transform:translateX(-50%);font-size:.5em;color:#334155;letter-spacing:1px}
+.f.admin-pantry::after{content:'🫖';position:absolute;top:11%;right:6%;font-size:1em}
+
+/* ---- 研发室 lab: 服务器机架 + 白板 + 监控大屏 + 长条工位桌 + 吊灯线 ---- */
+.scene-bg.lab{background:linear-gradient(180deg,#0b1220 0%,#16213a 54%,#232f47 54.5%,#141d2e 100%)}
+.scene-bg.lab::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 19%,rgba(129,140,248,.07) 19% 20%)}
+.f.lab-led{top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#22c55e,#818cf8,#06b6d4,#22c55e);opacity:.7;box-shadow:0 0 14px rgba(129,140,248,.8)}
+.f.lab-server{top:14%;left:2%;width:13%;height:48%;background:#0a0f1a;border:2px solid #2d3b55;border-radius:4px}
+.f.lab-server::before{content:'';position:absolute;inset:5% 10%;background:repeating-linear-gradient(180deg,#1a2438 0 11%,#0a0f1a 11% 15%)}
+.f.lab-server::after{content:'';position:absolute;top:9%;right:16%;width:4px;height:4px;border-radius:50%;background:#22c55e;box-shadow:0 14px 0 #22c55e,0 28px 0 #f59e0b,0 42px 0 #22c55e,0 56px 0 #ef4444;animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.f.lab-board{top:6%;left:17%;width:26%;height:20%;background:#e8edf5;border:3px solid #475569;border-radius:3px}
+.f.lab-board::before{content:'';position:absolute;top:18%;left:8%;width:50%;height:7%;background:#94a3b8;box-shadow:0 10px 0 #cbd5e1,0 20px 0 #cbd5e1,30px 28px 0 rgba(248,113,113,.55);border-radius:2px}
+.f.lab-wallmon{top:6%;left:58%;width:30%;height:19%;background:#020617;border:3px solid #334155;border-radius:4px}
+.f.lab-wallmon::after{content:'▁▃▂▅▄▇▆█';position:absolute;bottom:10%;left:10%;font-size:.55em;color:#22c55e;letter-spacing:1px;opacity:.85}
+.f.lab-cord{top:0;left:51.5%;width:2px;height:7%;background:#475569}
+.f.lab-frame{top:28%;left:80%;width:18%;height:14%;border:3px solid #64748b;background:#0f172a;box-shadow:0 3px 8px rgba(0,0,0,.4)}
+.f.lab-desk{top:45%;left:17%;width:80%;height:16%;background:linear-gradient(180deg,#3b4a63 0 9%,#1e293b 9%);border-top:2px solid #475569;border-radius:6px 6px 0 0}
+.f.lab-desk::after{content:'';position:absolute;top:30%;left:5%;width:12%;height:55%;background:rgba(0,0,0,.25);border-radius:3px}
+.f.lab-cable{top:72%;left:28%;width:34%;height:9%;border-bottom:3px solid rgba(71,85,105,.7);border-radius:50%}
+
+/* ---- 市场室 market: 创意墙 + 投影幕 + 画架 + 三脚架 + 工作台 + 货堆托盘 ---- */
+.scene-bg.market{background:linear-gradient(180deg,#fdf6ec 0%,#fbeed9 54%,#e2bd93 54.5%,#c49a6c 100%)}
+.scene-bg.market::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 11%,rgba(0,0,0,.06) 11% 11.6%)}
+.f.market-bunting{top:1%;left:0;right:0;height:2.6%;background:repeating-linear-gradient(90deg,#f472b6 0 6%,#fbbf24 6% 12%,#34d399 12% 18%,#60a5fa 18% 24%);opacity:.55;border-radius:0 0 4px 4px}
+.f.market-ideawall{top:6%;left:4%;width:36%;height:22%;background:#f8e6c8;border:4px solid #d4a574;border-radius:4px}
+.f.market-ideawall::before{content:'';position:absolute;top:14%;left:8%;width:13%;height:20%;background:#fbbf24;transform:rotate(-4deg);box-shadow:26px 26px 0 #f472b6,52px 6px 0 #34d399,74px 30px 0 #60a5fa}
+.f.market-ideawall::after{content:'IDEA WALL';position:absolute;bottom:5%;right:6%;font-size:.5em;color:#a16207;letter-spacing:2px}
+.f.market-screen{top:5%;left:44%;width:30%;height:20%;background:linear-gradient(180deg,#fff,#eef2f7);border:2px solid #94a3b8;border-top:6px solid #475569;border-radius:2px}
+.f.market-screen::before{content:'';position:absolute;top:-16%;left:47%;width:6%;height:10%;background:#475569}
+.f.market-frame{top:29%;left:45%;width:15%;height:13%;border:3px solid #d4a574;background:#fff;transform:rotate(-2deg);box-shadow:0 3px 6px rgba(0,0,0,.12)}
+.f.market-easel{top:20%;left:77%;width:17%;height:26%;background:#fff;border:3px solid #a16207;border-radius:2px}
+.f.market-easel::before{content:'';position:absolute;bottom:-46%;left:12%;width:3px;height:46%;background:#a16207;transform:rotate(14deg);transform-origin:top}
+.f.market-easel::after{content:'';position:absolute;bottom:-46%;right:12%;width:3px;height:46%;background:#a16207;transform:rotate(-14deg);transform-origin:top}
+.f.market-tripod{top:44%;left:69%;width:3px;height:16%;background:#475569}
+.f.market-tripod::before{content:'';position:absolute;top:35%;left:-1px;width:3px;height:75%;background:#475569;transform:rotate(22deg);transform-origin:top}
+.f.market-tripod::after{content:'';position:absolute;top:35%;left:-1px;width:3px;height:75%;background:#475569;transform:rotate(-22deg);transform-origin:top}
+.f.market-table{top:46%;left:6%;width:48%;height:15%;background:linear-gradient(180deg,#f0d9b5 0 12%,#c49a6c 12%);border-radius:6px 6px 0 0;box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.f.market-pallet{top:72%;left:62%;width:30%;height:10%;background:repeating-linear-gradient(90deg,#a16207 0 12%,#854d0e 12% 14%);border-radius:3px;opacity:.55}
+
+/* ---- 老板办公室 boss: 落地窗夜景 + 书柜酒柜 + 大班台 + 衣帽架 + 沙发茶几 ---- */
+.scene-bg.boss{background:linear-gradient(180deg,#2a2320 0%,#3d332c 54%,#4a3b2f 54.5%,#2e241d 100%)}
+.scene-bg.boss::before{content:'';position:absolute;top:55%;left:0;right:0;bottom:0;background:repeating-linear-gradient(100deg,transparent 0 15%,rgba(255,255,255,.03) 15% 16%)}
+.scene-bg.boss::after{content:'';position:absolute;top:40%;left:0;right:0;height:1.4%;background:#5c4a38}
+.f.boss-window{top:4%;left:28%;width:40%;height:36%;background:linear-gradient(180deg,#0b1a33,#142b52);border:4px solid #6b5744;border-radius:3px;overflow:hidden}
+.f.boss-window::before{content:'';position:absolute;bottom:0;left:6%;width:9%;height:42%;background:#1e3a5f;box-shadow:14px 10px 0 #24466e,28px -8px 0 #1e3a5f,42px 6px 0 #2a4f7a,56px -2px 0 #1e3a5f,70px 12px 0 #24466e,84px 2px 0 #2a4f7a}
+.f.boss-window::after{content:'🌙';position:absolute;top:7%;right:9%;font-size:.9em;opacity:.9}
+.f.boss-shelf{top:5%;left:72%;width:25%;height:57%;background:#2a211b;border:3px solid #6b5744;border-radius:4px}
+.f.boss-shelf::before{content:'';position:absolute;inset:2% 4%;background:repeating-linear-gradient(180deg,transparent 0 23%,#6b5744 23% 25%)}
+.f.boss-shelf::after{content:'📚';position:absolute;bottom:4%;left:8%;font-size:.9em;opacity:.8}
+.f.boss-rack{top:10%;left:7%;width:3px;height:48%;background:#6b5744}
+.f.boss-rack::before{content:'';position:absolute;top:2%;left:-13px;width:29px;height:3px;background:#6b5744;border-radius:2px}
+.f.boss-rack::after{content:'';position:absolute;bottom:-2px;left:-11px;width:25px;height:5px;background:#6b5744;border-radius:50%}
+.f.boss-rug{top:66%;left:20%;width:46%;height:16%;background:radial-gradient(ellipse at center,#7f1d1d 0%,#5b1515 70%);border-radius:50%;opacity:.5}
+.f.boss-chair{top:32%;left:34%;width:14%;height:15%;background:#171310;border:2px solid #6b5744;border-radius:10px 10px 0 0}
+.f.boss-desk{top:46%;left:18%;width:46%;height:18%;background:linear-gradient(180deg,#7c5a3a 0 9%,#4a3527 9%);border-radius:8px 8px 0 0;box-shadow:0 6px 16px rgba(0,0,0,.45)}
+.f.boss-desk::before{content:'';position:absolute;top:16%;left:6%;right:6%;height:70%;background:rgba(0,0,0,.22);border-radius:4px}
+.f.boss-sofa{top:60%;left:2%;width:26%;height:15%;background:#5b1f1f;border-radius:10px 10px 4px 4px;border-bottom:4px solid #3d1414}
+.f.boss-sofa::before{content:'';position:absolute;top:-26%;left:0;right:0;height:42%;background:#6d2626;border-radius:10px 10px 0 0}
+.f.boss-sofa::after{content:'';position:absolute;top:12%;left:6%;width:40%;height:48%;background:rgba(0,0,0,.18);border-radius:6px;box-shadow:48px 0 0 rgba(0,0,0,.18)}
+.f.boss-table{top:70%;left:31%;width:16%;height:8%;background:linear-gradient(180deg,#2a211b 0 28%,#171310 28%);border-radius:4px}
+
+/* ===== ITEM CARDS (absolute positioned) ===== */
+.item-card{position:absolute;width:60px;height:60px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:all .25s;user-select:none;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);backdrop-filter:blur(6px);z-index:2}
+.item-card:active{transform:scale(.9)!important}
+.item-card .item-emoji{font-size:1.6em;line-height:1}
+.item-card .item-name{font-size:.6em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-weight:600;max-width:calc(100% - 6px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Hidden */
+.item-card.hidden-item{background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.08);backdrop-filter:blur(3px)}
+.item-card.hidden-item .item-emoji{filter:brightness(0);opacity:.2}
+.item-card.hidden-item .item-name{opacity:0}
+.item-card.hidden-item .discover-hint{position:absolute;font-size:1.3em;z-index:1}
+
+/* Revealed */
+.item-card.revealed:hover{border-color:rgba(129,140,248,.8);box-shadow:0 0 12px rgba(129,140,248,.3);transform:scale(1.06)}
+
+/* Selected */
+.item-card.selected{border-color:#818cf8;background:rgba(129,140,248,.25);box-shadow:0 0 18px rgba(129,140,248,.4)}
+.item-card.selected::after{content:'✓';position:absolute;top:2px;right:4px;font-size:.6em;color:#fff;font-weight:700;text-shadow:0 0 4px #818cf8}
+
+/* Synth new glow */
+.item-card.synth-item{border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.1)}
+
+/* Discover animation */
+.item-card.discovering{animation:discoverFlash .5s ease}
+@keyframes discoverFlash{0%{transform:scale(1);box-shadow:none}50%{transform:scale(1.2);box-shadow:0 0 30px rgba(250,204,21,.6);border-color:#fbbf24}100%{transform:scale(1);box-shadow:none}}
+
+/* ===== CRAFT AREA ===== */
+.craft-area{background:#1e293bee;backdrop-filter:blur(10px);border-top:1px solid #334155;padding:8px 16px;z-index:10}
+.craft-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px}
+.c-slot{width:56px;height:56px;border:2px dashed #475569;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.7em;color:#475569;cursor:pointer;transition:all .2s;background:#0f172a;position:relative;flex-shrink:0}
+.c-slot.filled{border-style:solid;border-color:#818cf8;background:rgba(129,140,248,.08);color:#e2e8f0}
+.c-slot.filled:hover{border-color:#f87171}
+.c-slot .cs-emoji{font-size:1.4em}
+.c-slot .cs-name{font-size:.6em;color:#94a3b8;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-plus{color:#475569;font-size:1em;flex-shrink:0}
+.craft-btn{padding:7px 20px;background:linear-gradient(135deg,#818cf8,#c084fc);color:#fff;border:none;border-radius:10px;font-size:.9em;font-weight:600;cursor:pointer;transition:all .2s;flex-shrink:0}
+.craft-btn:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(129,140,248,.4)}
+.craft-btn:disabled{opacity:.25;cursor:not-allowed;transform:none;box-shadow:none}
+.craft-actions{display:flex;gap:8px;justify-content:center}
+.small-btn{padding:5px 14px;background:#334155;color:#94a3b8;border:none;border-radius:8px;font-size:.78em;cursor:pointer;transition:all .2s}
+.small-btn:hover{background:#475569}
+
+/* ===== CODEX OVERLAY ===== */
+.codex-popup{background:#1e293b;border:1px solid #475569;border-radius:20px;padding:20px 16px;max-width:420px;width:92%;max-height:80vh;animation:popIn .4s ease;display:flex;flex-direction:column}
+.codex-popup-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.codex-popup-header h2{font-size:1.1em;font-weight:700}
+.codex-popup-header h2 span{color:#818cf8}
+.codex-popup-close{width:32px;height:32px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#94a3b8;font-size:1.1em;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.codex-popup-close:hover{border-color:#818cf8;color:#818cf8}
+.codex-tabs{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+.codex-tab{padding:3px 10px;border-radius:14px;font-size:.72em;cursor:pointer;border:1px solid #334155;color:#94a3b8;background:transparent;transition:all .2s}
+.codex-tab.active{background:#818cf8;color:#fff;border-color:#818cf8}
+.codex-progress{height:3px;background:#334155;border-radius:2px;overflow:hidden;margin-bottom:10px}
+.codex-progress-fill{height:100%;background:linear-gradient(90deg,#818cf8,#c084fc);transition:width .5s ease}
+.codex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;flex:1;padding-right:4px}
+.codex-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;background:#0f172a;border:1px solid #334155;border-radius:8px;font-size:.68em;color:#94a3b8;text-align:center;cursor:pointer;transition:all .2s}
+.codex-item:hover{border-color:#818cf8}
+.codex-item .ci-emoji{font-size:1.5em}
+.codex-item.locked{opacity:.3}
+.codex-item.locked .ci-emoji{filter:grayscale(1)}
+
+/* ===== PLAIN SCENE (新房间默认底色) & EDIT MODE ===== */
+.ico{display:inline-block;line-height:1;vertical-align:middle}
+.ico img{width:1.15em;height:1.15em;object-fit:contain;display:block;margin:auto}
+.ico em{font-style:normal;display:none}
+.ico.noimg img{display:none}
+.ico.noimg em{display:inline}
+
+.scene-bg.plain{background:linear-gradient(180deg,#e5e7eb 0%,#d1d5db 54%,#9ca3af 54.5%,#6b7280 100%)}
+.edit-bar{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(124,58,237,.93);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px;font-size:.8em}
+.edit-bar button{padding:3px 10px;border:none;border-radius:6px;background:#fff;color:#7c3aed;font-size:.9em;cursor:pointer}
+body.editing .room-nav{margin-top:30px}
+body.editing .item-card{cursor:grab;touch-action:none}
+.item-card .rz{display:none}
+body.editing .item-card .rz{display:block;position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;background:#7c3aed;border:2px solid #fff;border-radius:4px;cursor:nwse-resize;touch-action:none;z-index:3}
+.rf-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.rf-row label{width:72px;font-size:.78em;color:#94a3b8;flex-shrink:0}
+.rf-row input,.rf-row select{flex:1;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#e2e8f0;padding:6px 8px;font-size:.85em;min-width:0}
+.codex-item .del{display:none;position:absolute;top:-5px;right:-5px;width:16px;height:16px;background:#ef4444;color:#fff;border-radius:50%;font-size:10px;line-height:16px;text-align:center;z-index:2;cursor:pointer}
+body.editing .codex-item .del{display:block}
+.export-ta{width:100%;height:180px;background:#0f172a;color:#a5b4fc;border:1px solid #475569;border-radius:8px;font-size:.65em;font-family:monospace;padding:8px;margin-bottom:10px}
+
+/* ===== COMPANY MAP ===== */
+.map-popup{background:#1e293b;border:1px solid #475569;border-radius:20px;padding:20px 16px;max-width:420px;width:92%;animation:popIn .4s ease}
+.map-plan{display:grid;grid-auto-rows:96px;border:3px solid #64748b;border-radius:10px;overflow:hidden;background:#0f172a;margin-top:6px}
+.map-room{border:1px solid rgba(71,85,105,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;position:relative;background:#16213a;transition:background .2s}
+.map-room:hover{background:#1e2f4d}
+.map-room.cur{background:rgba(129,140,248,.16);box-shadow:inset 0 0 0 2px #818cf8}
+.map-room.locked{opacity:.45}
+.map-room .mr-emoji{font-size:1.5em}
+.map-room .mr-name{font-size:.8em;font-weight:600}
+.map-room .mr-count{font-size:.62em;color:#94a3b8;text-align:center;padding:0 4px}
+.map-door{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:34px;height:5px;background:#0f172a;border-radius:3px 3px 0 0}
+.map-room.entrance .map-door{background:#818cf8;height:6px}
+.map-legend{margin-top:10px;text-align:center;font-size:.72em;color:#64748b}
+
+/* ===== OVERLAYS ===== */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;animation:fadeIn .3s}
+.overlay.show{display:flex}
+.popup{background:#1e293b;border:1px solid #475569;border-radius:20px;padding:28px 24px;max-width:340px;width:88%;text-align:center;animation:popIn .4s ease}
+.popup .p-emoji{font-size:3em;margin-bottom:8px}
+.popup .p-title{font-size:1.3em;font-weight:700;margin-bottom:5px}
+.popup .p-formula{font-size:.85em;color:#64748b;margin-bottom:5px}
+.popup .p-tag{font-weight:600;font-size:.82em;margin-bottom:8px}
+.popup .p-tag.new{color:#22c55e}
+.popup .p-tag.dup{color:#f59e0b}
+.popup .p-desc{font-size:.85em;color:#94a3b8;line-height:1.6;margin-bottom:16px}
+.popup .p-fail{color:#f87171;font-size:1em;font-weight:600;margin-bottom:5px}
+.popup .p-egg{color:#fbbf24;font-size:.9em;margin-bottom:16px;line-height:1.5}
+.popup button{padding:8px 24px;background:linear-gradient(135deg,#818cf8,#c084fc);color:#fff;border:none;border-radius:10px;font-size:.9em;cursor:pointer}
+
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);background:#22c55e;color:#fff;padding:10px 24px;border-radius:16px;font-size:.95em;font-weight:600;opacity:0;transition:all .35s;z-index:70;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.toast.warn{background:linear-gradient(135deg,#f59e0b,#d97706)}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+
+@media(max-width:380px){
+  .item-card{width:52px;height:52px}
+  .item-card .item-emoji{font-size:1.3em}
+  .c-slot{width:48px;height:48px}
+}
+</style>
+</head>
+<body>
+
+<div class="room-area">
+  <div class="room-nav">
+    <button class="arrow-btn" id="btnPrev" onclick="prevRoom()">←</button>
+    <div class="room-title-area" onclick="openMap()" style="cursor:pointer">
+      <div class="room-title" id="roomTitle"></div>
+      <div class="room-dots" id="roomDots"></div>
+    </div>
+    <button class="arrow-btn" id="btnNext" onclick="nextRoom()">→</button>
+  </div>
+  <div class="room-container" id="roomContainer"></div>
+</div>
+
+<div class="craft-area">
+  <div class="craft-row">
+    <div class="c-slot" id="cs0" onclick="removeCraftSlot(0)"><span style="font-size:1em">①</span></div>
+    <span class="c-plus">+</span>
+    <div class="c-slot" id="cs1" onclick="removeCraftSlot(1)"><span style="font-size:1em">②</span></div>
+    <button class="craft-btn" id="craftBtn" onclick="doCraft()" disabled>合成!</button>
+  </div>
+  <div class="craft-actions">
+    <button class="small-btn" onclick="clearCraft()">清空</button>
+    <button class="small-btn" onclick="showHint()">💡 提示</button>
+    <button class="small-btn" onclick="openMap()">🗺️ 地图</button>
+    <button class="small-btn" onclick="openCodex()">📖 图鉴</button>
+  </div>
+</div>
+
+<div class="overlay" id="codexOverlay" onclick="closeOverlay(event)">
+  <div class="codex-popup" onclick="event.stopPropagation()">
+    <div class="codex-popup-header">
+      <h2>📖 图鉴 <span id="codexCount">0/0</span></h2>
+      <button class="codex-popup-close" onclick="closeCodex()">✕</button>
+    </div>
+    <div class="codex-tabs" id="codexTabs"></div>
+    <div class="codex-progress"><div class="codex-progress-fill" id="codexProgressFill" style="width:0%"></div></div>
+    <div class="codex-grid" id="codexGrid"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mapOverlay" onclick="closeOverlay(event)">
+  <div class="map-popup" onclick="event.stopPropagation()">
+    <div class="codex-popup-header">
+      <h2>🗺️ 公司平面图</h2>
+      <button class="codex-popup-close" onclick="closeMap()">✕</button>
+    </div>
+    <div class="map-plan" id="mapPlan"></div>
+    <div class="map-legend">点击房间快速前往 · 底部 🚪 为公司正门</div>
+  </div>
+</div>
+
+<div class="overlay" id="recipeOverlay" onclick="closeOverlay(event)"><div class="popup" id="recipeCard" onclick="event.stopPropagation()" style="text-align:left;max-height:85vh;overflow-y:auto"></div></div>
+<div class="overlay" id="resultOverlay" onclick="closeOverlay(event)"><div class="popup" id="resultCard"></div></div>
+<div class="overlay" id="detailOverlay" onclick="closeOverlay(event)"><div class="popup" id="detailCard"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+// ==================== ENGINE ====================
+// 游戏内容全部在 data.js（GAME_DATA）中定义，本文件只负责逻辑与渲染。
+// ?edit=1 布局编辑模式（拖动道具+导出坐标）  ?debug=1 数据校验报告
+const D=window.GAME_DATA||{};
+const Q=new URLSearchParams(location.search);
+const EDIT=Q.has('edit'),DEBUG=Q.has('debug');
+const ROOMS=D.rooms||[];
+const BASE_ITEMS=D.baseItems||[];
+const ITEM_RECIPES=D.itemRecipes||[];
+const JOB_RECIPES=D.jobRecipes||[];
+let SYNTH_ITEMS,ALL_ITEMS,itemMap,itemRecipeLookup,jobRecipeLookup,TOTAL;
+function rebuildDerived(){
+  SYNTH_ITEMS=ITEM_RECIPES.map(r=>({id:r.result,emoji:r.emoji,name:r.name,room:r.room,isSynth:true,x:r.x,y:r.y,w:r.w,h:r.h}));
+  ALL_ITEMS=[...BASE_ITEMS,...SYNTH_ITEMS];
+  itemMap={};ALL_ITEMS.forEach(i=>itemMap[i.id]=i);
+  itemRecipeLookup={};ITEM_RECIPES.forEach(r=>{const k=[r.a,r.b].sort().join('+');r.key=k;itemRecipeLookup[k]=r});
+  jobRecipeLookup={};JOB_RECIPES.forEach(r=>{r.key=[r.a,r.b].sort().join('+');jobRecipeLookup[r.key]=r});
+  TOTAL=ITEM_RECIPES.length+JOB_RECIPES.length;
+}
+rebuildDerived();
+const EASTER_EGGS={};
+(D.easterEggs||[]).forEach(([a,b,msg])=>{EASTER_EGGS[[a,b].sort().join('+')]=msg});
+const GENERIC_FAILS=(D.genericFails&&D.genericFails.length)?D.genericFails:['合成失败，换个组合试试。'];
+const ROOM_DECOS=D.roomDecos||{};
+const SAVE_KEY='jc_'+(D.version||'v1');
+// 图片图标：useImages 开启后按约定路径找图，加载失败自动回退 emoji
+// 约定：assets/items/<道具id>.png  assets/jobs/<岗位名>.png  assets/rooms/<房间id>.png
+// 单条数据可用 img:'路径' 覆盖约定文件名
+const USE_IMG=!!D.useImages;
+const ASSET_BASE=D.assetBase||'assets/';
+function iconHTML(emoji,path){
+  if(!USE_IMG||!path)return emoji;
+  return `<span class="ico"><img src="${ASSET_BASE}${encodeURI(path)}" onerror="this.parentNode.classList.add('noimg')" draggable="false"><em>${emoji}</em></span>`;
+}
+const itemIcon=it=>iconHTML(it.emoji,it.img||('items/'+it.id+'.png'));
+const jobIcon=j=>iconHTML(j.emoji,j.img||('jobs/'+j.job+'.png'));
+const roomIcon=r=>iconHTML(r.emoji,r.img||('rooms/'+r.id+'.png'));
+
+// ==================== STATE ====================
+let S={currentRoom:0,revealed:[],discoveredItems:[],discoveredJobs:[],slots:[null,null],codexFilter:'all'};
+function load(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));if(d){S.revealed=d.revealed||[];S.discoveredItems=d.discoveredItems||[];S.discoveredJobs=d.discoveredJobs||[]}}catch(e){}}
+function save(){localStorage.setItem(SAVE_KEY,JSON.stringify({revealed:S.revealed,discoveredItems:S.discoveredItems,discoveredJobs:S.discoveredJobs}))}
+
+// ==================== HELPERS ====================
+function jobCount(){return S.discoveredJobs.length}
+function isUnlocked(room){return EDIT||jobCount()>=room.unlockAt}
+function isRevealed(id){return S.revealed.includes(id)}
+function isSynthOwned(id){return ITEM_RECIPES.some(r=>r.result===id&&S.discoveredItems.includes(r.key))}
+function canUseItem(id){const it=itemMap[id];if(!it)return false;if(it.isSynth)return isSynthOwned(id);return isRevealed(id)}
+function getRoomItems(roomId){
+  const base=BASE_ITEMS.filter(i=>i.room===roomId);
+  const synth=SYNTH_ITEMS.filter(i=>i.room===roomId&&isSynthOwned(i.id));
+  return[...base,...synth];
+}
+
+// ==================== TOAST ====================
+let _toastTimer;
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(type==='warn'?' warn':'');
+  clearTimeout(_toastTimer);
+  requestAnimationFrame(()=>{t.classList.add('show');_toastTimer=setTimeout(()=>t.classList.remove('show'),1600)});
+}
+
+// ==================== RENDER ====================
+function renderRoom(){
+  const room=ROOMS[S.currentRoom];
+  document.getElementById('roomTitle').innerHTML=roomIcon(room)+' '+room.name+' <span style="font-size:.72em;opacity:.5">🗺️</span>';
+  document.getElementById('roomDots').innerHTML=ROOMS.map((_,i)=>{
+    const r=ROOMS[i];const u=isUnlocked(r);
+    let cls='room-dot';if(i===S.currentRoom)cls+=' active';if(!u)cls+=' locked';
+    return`<span class="${cls}"></span>`;
+  }).join('');
+  document.getElementById('btnPrev').classList.toggle('disabled',S.currentRoom===0);
+  document.getElementById('btnNext').classList.toggle('disabled',S.currentRoom===ROOMS.length-1);
+
+  const container=document.getElementById('roomContainer');
+  // Build scene
+  const items=EDIT?[...BASE_ITEMS.filter(i=>i.room===room.id),...SYNTH_ITEMS.filter(i=>i.room===room.id)]:getRoomItems(room.id);
+  let html=`<div class="room-scene" id="roomScene">`;
+  html+=`<div class="scene-bg ${room.scene||room.id}"></div>`;
+  html+=(ROOM_DECOS[room.id]||'');
+  items.forEach(it=>{
+    const style=`top:${it.y}%;left:${it.x}%`+(it.w?`;width:${it.w}px`:'')+(it.h?`;height:${it.h}px`:'');
+    const ef=(it.w||it.h)?` style="font-size:${(1.6*Math.min(it.w||60,it.h||60)/60).toFixed(2)}em"`:'';
+    if(EDIT){
+      html+=`<div class="item-card revealed${it.isSynth?' synth-item':''}" data-id="${it.id}" style="${style}"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span><span class="rz"></span></div>`;
+    }else if(it.isSynth){
+      const sel=S.slots.includes(it.id)?'selected':'';
+      html+=`<div class="item-card revealed synth-item ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span></div>`;
+    }else if(!isRevealed(it.id)){
+      html+=`<div class="item-card hidden-item" style="${style}" onclick="revealItem('${it.id}',this)"><span class="discover-hint">❓</span><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span></div>`;
+    }else{
+      const sel=S.slots.includes(it.id)?'selected':'';
+      html+=`<div class="item-card revealed ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span></div>`;
+    }
+  });
+  html+=`</div>`;
+  container.innerHTML=html;
+  if(EDIT)container.querySelectorAll('.item-card').forEach(el=>{
+    el.onpointerdown=e=>editDrag(e,el);
+    el.ondblclick=()=>{
+      const it=itemMap[el.dataset.id];if(!it)return;
+      delete it.w;delete it.h;
+      const r=ITEM_RECIPES.find(x=>x.result===it.id);if(r){delete r.w;delete r.h}
+      renderRoom();showToast(it.name+' 尺寸已重置');
+    };
+  });
+}
+
+function renderSlots(){
+  for(let i=0;i<2;i++){
+    const el=document.getElementById('cs'+i);
+    if(S.slots[i]){
+      const it=itemMap[S.slots[i]];
+      el.className='c-slot filled';
+      el.innerHTML=`<span class="cs-emoji">${itemIcon(it)}</span><span class="cs-name">${it.name}</span>`;
+    }else{
+      el.className='c-slot';
+      el.innerHTML=`<span style="font-size:1em">${['①','②'][i]}</span>`;
+    }
+  }
+  document.getElementById('craftBtn').disabled=S.slots.filter(Boolean).length<2;
+}
+
+function renderCodex(){
+  const found=S.discoveredItems.length+S.discoveredJobs.length;
+  document.getElementById('codexCount').textContent=found+'/'+TOTAL;
+  document.getElementById('codexProgressFill').style.width=(found/TOTAL*100)+'%';
+  const tabs=[{id:'all',l:'全部'},{id:'base',l:'基础物品'},{id:'synth',l:'合成物品'},{id:'job',l:'岗位'}];
+  document.getElementById('codexTabs').innerHTML=tabs.map(t=>
+    `<button class="codex-tab ${S.codexFilter===t.id?'active':''}" onclick="setCodexFilter('${t.id}')">${t.l}</button>`
+  ).join('')+(EDIT?`<button class="codex-tab" style="background:#22c55e;color:#fff;border-color:#22c55e" onclick="openRecipeForm()">➕ 添加公式</button>`:'');
+  let items=[];const f=S.codexFilter;
+  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,icon:itemIcon(it),name:it.name,locked:!EDIT&&!isRevealed(it.id),type:'base',data:it}));
+  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:itemIcon(itemMap[r.result]),name:r.name,locked:!EDIT&&!S.discoveredItems.includes(r.key),type:'synth',data:r}));
+  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:jobIcon(r),name:r.job,locked:!EDIT&&!S.discoveredJobs.includes(r.key),type:'job',data:r}));
+  window._cItems=items;
+  document.getElementById('codexGrid').innerHTML=items.map((it,i)=>{
+    const cls=it.locked?'codex-item locked':'codex-item';
+    const e=it.locked?'❓':it.icon;const n=it.locked?'???':it.name;
+    const oc=it.locked?'':`onclick="showCodexDetail(${i})"`;
+    const del=(EDIT&&(it.type==='synth'||it.type==='job'))?`<span class="del" onclick="event.stopPropagation();deleteRecipe('${it.type}','${it.data.key}')">✕</span>`:'';
+    return`<div class="${cls}" ${oc}>${del}<span class="ci-emoji">${e}</span>${n}</div>`;
+  }).join('');
+}
+
+// ==================== ACTIONS ====================
+function revealItem(id,el){
+  if(isRevealed(id))return;
+  S.revealed.push(id);save();
+  el.classList.add('discovering');
+  const it=itemMap[id];
+  showToast(it.emoji+' '+it.name+' 发现！');
+  setTimeout(()=>renderRoom(),500);
+  renderCodex();
+}
+
+function toggleSelect(id){
+  if(!canUseItem(id))return;
+  const idx=S.slots.indexOf(id);
+  if(idx>=0){S.slots[idx]=null;const f=S.slots.filter(Boolean);S.slots=[f[0]||null,f[1]||null]}
+  else{for(let i=0;i<2;i++){if(!S.slots[i]){S.slots[i]=id;break}}}
+  renderRoom();renderSlots();
+}
+
+function removeCraftSlot(i){
+  if(!S.slots[i])return;
+  S.slots[i]=null;const f=S.slots.filter(Boolean);S.slots=[f[0]||null,f[1]||null];
+  renderRoom();renderSlots();
+}
+function clearCraft(){S.slots=[null,null];renderRoom();renderSlots()}
+
+function prevRoom(){
+  if(S.currentRoom<=0)return;
+  const el=document.getElementById('roomScene');
+  if(!el)return;
+  el.classList.add('slide-out-right');
+  setTimeout(()=>{S.currentRoom--;
+    if(!isUnlocked(ROOMS[S.currentRoom])){showToast('🔒 '+ROOMS[S.currentRoom].unlockText,'warn');S.currentRoom++;renderRoom();return}
+    renderRoom();renderSlots();
+  },200);
+}
+function nextRoom(){
+  if(S.currentRoom>=ROOMS.length-1)return;
+  const el=document.getElementById('roomScene');
+  if(!el)return;
+  el.classList.add('slide-out-left');
+  setTimeout(()=>{S.currentRoom++;
+    if(!isUnlocked(ROOMS[S.currentRoom])){showToast('🔒 '+ROOMS[S.currentRoom].unlockText,'warn');S.currentRoom--;renderRoom();return}
+    renderRoom();renderSlots();
+  },200);
+}
+
+function doCraft(){
+  const a=S.slots[0],b=S.slots[1];if(!a||!b)return;
+  const key=[a,b].sort().join('+');
+  const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
+  const ir=itemRecipeLookup[key];
+  if(ir){
+    const isNew=!S.discoveredItems.includes(key);
+    if(isNew){S.discoveredItems.push(key);save()}
+    const formula=itemIcon(itemMap[ir.a])+itemMap[ir.a].name+' + '+itemIcon(itemMap[ir.b])+itemMap[ir.b].name;
+    card.innerHTML=`<div class="p-emoji">${itemIcon(itemMap[ir.result])}</div><div class="p-title">${ir.name}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新物品合成！':'✅ 已合成过'}</div><div class="p-desc">${ir.desc}</div><button onclick="closeOv()">继续</button>`;
+    ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();renderCodex();checkUnlocks();return;
+  }
+  const jr=jobRecipeLookup[key];
+  if(jr){
+    const isNew=!S.discoveredJobs.includes(key);
+    if(isNew){S.discoveredJobs.push(key);save()}
+    const formula=itemIcon(itemMap[jr.a])+itemMap[jr.a].name+' + '+itemIcon(itemMap[jr.b])+itemMap[jr.b].name;
+    card.innerHTML=`<div class="p-emoji">${jobIcon(jr)}</div><div class="p-title">${jr.job}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新岗位解锁！':'✅ 已解锁过'}</div><div class="p-desc">${jr.desc.replace(/\n/g,'<br>')}</div><button onclick="closeOv()">继续</button>`;
+    ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();renderCodex();checkUnlocks();return;
+  }
+  const egg=EASTER_EGGS[key];
+  const failMsg=egg||GENERIC_FAILS[Math.floor(Math.random()*GENERIC_FAILS.length)];
+  card.innerHTML=`<div class="p-emoji">${egg?'🥚':'💨'}</div><div class="p-fail">${egg?'彩蛋！':'合成失败'}</div><div class="p-formula">${itemIcon(itemMap[a])} + ${itemIcon(itemMap[b])}</div><div class="p-egg">${failMsg}</div><button onclick="closeOv()">再试试</button>`;
+  ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();
+}
+
+let _unlockState={};
+function checkUnlocks(){
+  const jc=jobCount();
+  ROOMS.forEach(r=>{
+    if(r.unlockAt>0&&jc>=r.unlockAt&&!_unlockState[r.id]){
+      _unlockState[r.id]=true;
+      setTimeout(()=>showToast('🔓 '+r.emoji+' '+r.name+' 已解锁！','warn'),500);
+    }
+  });
+}
+function initUnlocks(){ROOMS.forEach(r=>{if(r.unlockAt>0&&jobCount()>=r.unlockAt)_unlockState[r.id]=true})}
+
+function showHint(){
+  const owned=[];
+  BASE_ITEMS.forEach(i=>{if(isRevealed(i.id))owned.push(i.id)});
+  SYNTH_ITEMS.forEach(i=>{if(isSynthOwned(i.id))owned.push(i.id)});
+  let hint='';
+  const possI=ITEM_RECIPES.filter(r=>!S.discoveredItems.includes(r.key)&&owned.includes(r.a)&&owned.includes(r.b));
+  const possJ=JOB_RECIPES.filter(r=>!S.discoveredJobs.includes(r.key)&&owned.includes(r.a)&&owned.includes(r.b));
+  if(possI.length>0){const r=possI[Math.floor(Math.random()*possI.length)];hint=`试试把 ${itemIcon(itemMap[r.a])}${itemMap[r.a].name} 和 ${itemIcon(itemMap[r.b])}${itemMap[r.b].name} 放在一起……`}
+  else if(possJ.length>0){const r=possJ[Math.floor(Math.random()*possJ.length)];const h=[`试试 ${itemIcon(itemMap[r.a])} 和 ${itemIcon(itemMap[r.b])} 组合……`,`有个岗位叫「${r.job}」，猜猜需要什么？`,`${itemIcon(itemMap[r.a])} 和某样东西能合出一个岗位……`];hint=h[Math.floor(Math.random()*h.length)]}
+  else if(owned.length<ALL_ITEMS.length){
+    const unrev=BASE_ITEMS.filter(i=>!isRevealed(i.id)&&isUnlocked(ROOMS.find(r=>r.id===i.room)));
+    if(unrev.length>0)hint='还有物品没发现，多点点房间里的问号！';
+    else{const lr=ROOMS.filter(r=>!isUnlocked(r));if(lr.length>0)hint=`还有${lr.length}个房间没解锁，多合成岗位试试！`;else hint='多试试不同组合吧！'}
+  }else{const rem=TOTAL-S.discoveredItems.length-S.discoveredJobs.length;hint=rem>0?`还有${rem}个配方等你发现！`:'🎊 全部解锁！你是办公室炼金术大师！'}
+  const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
+  card.innerHTML=`<div class="p-emoji">💡</div><div class="p-title">提示</div><div class="p-desc">${hint}</div><button onclick="closeOv()">知道了</button>`;
+  ov.classList.add('show');
+}
+
+function openCodex(){renderCodex();document.getElementById('codexOverlay').classList.add('show')}
+function closeCodex(){document.getElementById('codexOverlay').classList.remove('show')}
+function setCodexFilter(f){S.codexFilter=f;renderCodex()}
+
+// ==================== COMPANY MAP ====================
+// 平面图由 data.js 的 mapLayout 驱动：每行一个数组，单房间行横跨整行
+function renderMap(){
+  const plan=document.getElementById('mapPlan');
+  const rows=(D.mapLayout&&D.mapLayout.length)?D.mapLayout:[ROOMS.map(r=>r.id)];
+  const cols=Math.max(...rows.map(r=>r.length));
+  plan.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  plan.innerHTML=rows.map(row=>row.map(id=>{
+    const idx=ROOMS.findIndex(x=>x.id===id);if(idx<0)return'';
+    const r=ROOMS[idx],u=isUnlocked(r);
+    const base=BASE_ITEMS.filter(i=>i.room===id);
+    const syn=ITEM_RECIPES.filter(x=>x.room===id);
+    const found=base.filter(i=>isRevealed(i.id)).length+syn.filter(x=>S.discoveredItems.includes(x.key)).length;
+    let cls='map-room';
+    if(idx===S.currentRoom)cls+=' cur';
+    if(!u)cls+=' locked';
+    if(r.entrance)cls+=' entrance';
+    const span=(row.length===1&&cols>1)?' style="grid-column:1/-1"':'';
+    const inner=u
+      ?`<span class="mr-emoji">${roomIcon(r)}</span><span class="mr-name">${r.name}</span><span class="mr-count">物品 ${found}/${base.length+syn.length}</span>`
+      :`<span class="mr-emoji">🔒</span><span class="mr-name">${r.name}</span><span class="mr-count">${r.unlockText||''}</span>`;
+    return`<div class="${cls}"${span} onclick="mapGoto(${idx})">${inner}<span class="map-door"></span></div>`;
+  }).join('')).join('');
+}
+function mapGoto(idx){
+  const r=ROOMS[idx];
+  if(!isUnlocked(r)){showToast('🔒 '+r.unlockText,'warn');return}
+  S.currentRoom=idx;closeMap();renderRoom();renderSlots();
+}
+function openMap(){renderMap();document.getElementById('mapOverlay').classList.add('show')}
+function closeMap(){document.getElementById('mapOverlay').classList.remove('show')}
+
+function showCodexDetail(idx){
+  const it=window._cItems[idx];if(!it||it.locked)return;
+  const ov=document.getElementById('detailOverlay'),card=document.getElementById('detailCard');
+  let formula='',desc='';
+  if(it.type==='base'){const rm=ROOMS.find(r=>r.id===it.data.room);desc='来自：'+(rm?rm.emoji+' '+rm.name:'未知')}
+  else if(it.type==='synth'){formula=itemIcon(itemMap[it.data.a])+itemMap[it.data.a].name+' + '+itemIcon(itemMap[it.data.b])+itemMap[it.data.b].name;desc=it.data.desc}
+  else if(it.type==='job'){formula=itemIcon(itemMap[it.data.a])+itemMap[it.data.a].name+' + '+itemIcon(itemMap[it.data.b])+itemMap[it.data.b].name;desc=it.data.desc.replace(/\n/g,'<br>')}
+  card.innerHTML=`<div class="p-emoji">${it.icon}</div><div class="p-title">${it.name}</div>${formula?`<div class="p-formula">${formula}</div>`:''}<div class="p-desc">${desc}</div><button onclick="closeOv2()">关闭</button>`;
+  ov.classList.add('show');
+  document.getElementById('codexOverlay').classList.remove('show');
+}
+
+function closeOverlay(e){if(e.target.classList.contains('overlay'))e.target.classList.remove('show')}
+function closeOv(){document.getElementById('resultOverlay').classList.remove('show')}
+function closeOv2(){document.getElementById('detailOverlay').classList.remove('show')}
+
+
+// ==================== EDIT MODE & VALIDATOR ====================
+function initEditMode(){
+  document.body.classList.add('editing');
+  const bar=document.createElement('div');
+  bar.className='edit-bar';
+  bar.innerHTML=`<span>🛠 布局编辑模式：拖动道具摆放</span><button onclick="editExport()">导出数据</button><button onclick="showValidation()">校验</button>`;
+  document.body.appendChild(bar);
+}
+let _drag=null;
+function editDrag(e,el){
+  e.preventDefault();
+  const scene=document.getElementById('roomScene');if(!scene)return;
+  const rect=scene.getBoundingClientRect();
+  const id=el.dataset.id;
+  const isResize=e.target.classList.contains('rz');
+  el.setPointerCapture(e.pointerId);
+  const sx=e.clientX,sy=e.clientY,sw=el.offsetWidth,sh=el.offsetHeight;
+  const move=ev=>{
+    if(isResize){
+      const w=Math.round(Math.max(36,Math.min(180,sw+ev.clientX-sx)));
+      const h=Math.round(Math.max(36,Math.min(180,sh+ev.clientY-sy)));
+      el.style.width=w+'px';el.style.height=h+'px';
+      const em=el.querySelector('.item-emoji');
+      if(em)em.style.fontSize=(1.6*Math.min(w,h)/60).toFixed(2)+'em';
+      _drag={id,w,h,resize:true};
+    }else{
+      let x=(ev.clientX-rect.left-el.offsetWidth/2)/rect.width*100;
+      let y=(ev.clientY-rect.top-el.offsetHeight/2)/rect.height*100;
+      x=Math.max(0,Math.min(100-el.offsetWidth/rect.width*100,x));
+      y=Math.max(0,Math.min(100-el.offsetHeight/rect.height*100,y));
+      el.style.left=x+'%';el.style.top=y+'%';
+      _drag={id,x:Math.round(x*10)/10,y:Math.round(y*10)/10};
+    }
+  };
+  const up=()=>{
+    el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);
+    if(_drag&&_drag.id===id){
+      const it=itemMap[id];
+      const r=ITEM_RECIPES.find(x=>x.result===id);
+      if(_drag.resize){
+        it.w=_drag.w;it.h=_drag.h;
+        if(r){r.w=_drag.w;r.h=_drag.h}
+        showToast(`${it.name} → 宽:${it.w} 高:${it.h}`);
+      }else{
+        it.x=_drag.x;it.y=_drag.y;
+        if(r){r.x=_drag.x;r.y=_drag.y}
+        showToast(`${it.name} → x:${it.x} y:${it.y}`);
+      }
+      _drag=null;
+    }
+  };
+  el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
+}
+function editExport(){
+  const strip=r=>({a:r.a,b:r.b,result:r.result,emoji:r.emoji,name:r.name,desc:r.desc,room:r.room,x:r.x,y:r.y,w:r.w,h:r.h});
+  const stripJ=r=>({a:r.a,b:r.b,job:r.job,emoji:r.emoji,desc:r.desc});
+  const out='// 编辑后的最新数据，粘贴回 data.js 替换对应数组\nbaseItems:'+JSON.stringify(BASE_ITEMS)+',\n\nitemRecipes:'+JSON.stringify(ITEM_RECIPES.map(strip))+',\n\njobRecipes:'+JSON.stringify(JOB_RECIPES.map(stripJ))+',';
+  const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
+  card.innerHTML=`<div class="p-title">导出坐标数据</div><div class="p-desc">包含拖动后的最新坐标，复制后替换 data.js 中的 baseItems / itemRecipes / jobRecipes</div><textarea class="export-ta" id="exportTa"></textarea><button onclick="navigator.clipboard.writeText(document.getElementById('exportTa').value).then(()=>showToast('已复制'))">复制</button> <button onclick="closeOv()">关闭</button>`;
+  document.getElementById('exportTa').value=out;
+  ov.classList.add('show');
+}
+function validateData(){
+  const errs=[];
+  if(!ROOMS.length)errs.push('rooms 为空');
+  const roomIds=new Set(ROOMS.map(r=>r.id));
+  const seen=new Set();
+  ALL_ITEMS.forEach(i=>{
+    if(seen.has(i.id))errs.push('物品id重复: '+i.id);
+    seen.add(i.id);
+    if(!roomIds.has(i.room))errs.push(`物品 ${i.id} 所在房间 ${i.room} 不存在`);
+    if(i.x<0||i.x>92||i.y<0||i.y>88)errs.push(`物品 ${i.id} 坐标可能越界 x:${i.x} y:${i.y}`);
+    if(i.w!=null&&(i.w<24||i.w>240))errs.push(`物品 ${i.id} 宽度异常: ${i.w}`);
+    if(i.h!=null&&(i.h<24||i.h>240))errs.push(`物品 ${i.id} 高度异常: ${i.h}`);
+  });
+  const ref=(id,src)=>{if(!itemMap[id])errs.push(`${src} 引用了不存在的物品id: ${id}`)};
+  ITEM_RECIPES.forEach(r=>{ref(r.a,'物品配方['+r.name+']');ref(r.b,'物品配方['+r.name+']')});
+  JOB_RECIPES.forEach(r=>{ref(r.a,'岗位['+r.job+']');ref(r.b,'岗位['+r.job+']')});
+  const rk=new Set();
+  ITEM_RECIPES.forEach(r=>{if(rk.has(r.key))errs.push('配方重复: '+r.key);rk.add(r.key)});
+  JOB_RECIPES.forEach(r=>{if(rk.has(r.key))errs.push('配方冲突(同组合已被占用): '+r.key+' → '+r.job);rk.add(r.key)});
+  Object.keys(EASTER_EGGS).forEach(k=>{if(rk.has(k))errs.push('彩蛋组合与配方冲突: '+k)});
+  ROOMS.forEach(r=>{
+    if(r.unlockAt>0&&!r.unlockText)errs.push(`房间 ${r.id} 有解锁条件但缺少 unlockText`);
+    if(!r.scene)errs.push(`提示: 房间 ${r.id} 未指定 scene 主题（可用 plain）`);
+  });
+  if(D.mapLayout){
+    const mids=D.mapLayout.flat();
+    mids.forEach(id=>{if(!roomIds.has(id))errs.push('mapLayout 引用了不存在的房间: '+id)});
+    ROOMS.forEach(r=>{if(!mids.includes(r.id))errs.push('mapLayout 缺少房间: '+r.id)});
+  }
+  return errs;
+}
+function showValidation(){
+  const errs=validateData();
+  const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
+  card.innerHTML=`<div class="p-emoji">${errs.length?'⚠️':'✅'}</div><div class="p-title">数据校验</div><div class="p-desc" style="text-align:left;max-height:50vh;overflow-y:auto">${errs.length?errs.map(e=>'· '+e).join('<br>'):'全部通过：'+ROOMS.length+'个房间 / '+BASE_ITEMS.length+'个基础道具 / '+ITEM_RECIPES.length+'个物品配方 / '+JOB_RECIPES.length+'个岗位 / '+Object.keys(EASTER_EGGS).length+'个彩蛋'}</div><button onclick="closeOv()">知道了</button>`;
+  ov.classList.add('show');
+}
+
+
+// ==================== RECIPE ADD / DELETE (edit mode) ====================
+function deleteRecipe(type,key){
+  if(type==='synth'){
+    const r=ITEM_RECIPES.find(x=>x.key===key);if(!r)return;
+    const deps=[...ITEM_RECIPES.filter(x=>x!==r&&(x.a===r.result||x.b===r.result)),
+                ...JOB_RECIPES.filter(x=>x.a===r.result||x.b===r.result)];
+    if(deps.length){showToast('⚠️ 先删依赖['+r.name+']的: '+deps.slice(0,3).map(d=>d.name||d.job).join('、')+(deps.length>3?' 等'+deps.length+'条':''),'warn');return}
+    if(!confirm('删除物品配方 ['+r.name+'] ？'))return;
+    ITEM_RECIPES.splice(ITEM_RECIPES.indexOf(r),1);
+  }else{
+    const r=JOB_RECIPES.find(x=>x.key===key);if(!r)return;
+    if(!confirm('删除岗位 ['+r.job+'] ？'))return;
+    JOB_RECIPES.splice(JOB_RECIPES.indexOf(r),1);
+  }
+  rebuildDerived();renderCodex();renderRoom();showToast('已删除，记得点"导出数据"保存');
+}
+function openRecipeForm(){
+  const opts=ALL_ITEMS.map(i=>`<option value="${i.id}">${i.emoji} ${i.name}${i.isSynth?'(合成)':''}</option>`).join('');
+  const rooms=ROOMS.map(r=>`<option value="${r.id}">${r.emoji} ${r.name}</option>`).join('');
+  const card=document.getElementById('recipeCard');
+  card.innerHTML=`<div class="p-title">➕ 添加公式</div>
+  <div class="rf-row"><label>类型</label><select id="rfType" onchange="rfToggle()"><option value="synth">物品配方（合成新道具）</option><option value="job">岗位配方（合成岗位）</option></select></div>
+  <div class="rf-row"><label>材料A</label><select id="rfA">${opts}</select></div>
+  <div class="rf-row"><label>材料B</label><select id="rfB">${opts}</select></div>
+  <div id="rfSynth">
+    <div class="rf-row"><label>新物品id</label><input id="rfId" placeholder="英文唯一，如 redbull"></div>
+    <div class="rf-row"><label>emoji</label><input id="rfEmoji" placeholder="🧃"></div>
+    <div class="rf-row"><label>名称</label><input id="rfName" placeholder="如 红牛"></div>
+    <div class="rf-row"><label>所在房间</label><select id="rfRoom">${rooms}</select></div>
+  </div>
+  <div id="rfJob" style="display:none">
+    <div class="rf-row"><label>岗位名</label><input id="rfJobName" placeholder="如 卷王"></div>
+    <div class="rf-row"><label>emoji</label><input id="rfJobEmoji" placeholder="🐮"></div>
+  </div>
+  <div class="rf-row"><label>描述</label><input id="rfDesc" placeholder="合成成功后的介绍文案"></div>
+  <div style="margin-top:14px;text-align:center"><button onclick="submitRecipe()">添加</button> <button style="background:#334155" onclick="document.getElementById('recipeOverlay').classList.remove('show')">取消</button></div>`;
+  document.getElementById('recipeOverlay').classList.add('show');
+}
+function rfToggle(){
+  const t=document.getElementById('rfType').value;
+  document.getElementById('rfSynth').style.display=t==='synth'?'':'none';
+  document.getElementById('rfJob').style.display=t==='job'?'':'none';
+}
+function submitRecipe(){
+  const t=document.getElementById('rfType').value;
+  const a=document.getElementById('rfA').value,b=document.getElementById('rfB').value;
+  if(a===b){showToast('⚠️ 两个材料不能相同','warn');return}
+  const key=[a,b].sort().join('+');
+  if(itemRecipeLookup[key]||jobRecipeLookup[key]){showToast('⚠️ 该组合已被其他公式占用','warn');return}
+  if(EASTER_EGGS[key]){showToast('⚠️ 该组合是彩蛋，请先在 data.js 删除','warn');return}
+  const desc=document.getElementById('rfDesc').value.trim();
+  if(t==='synth'){
+    const id=document.getElementById('rfId').value.trim();
+    const emoji=document.getElementById('rfEmoji').value.trim()||'❔';
+    const name=document.getElementById('rfName').value.trim();
+    if(!id||!name){showToast('⚠️ 物品id和名称必填','warn');return}
+    if(!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(id)){showToast('⚠️ id须为英文字母/数字/下划线','warn');return}
+    if(itemMap[id]){showToast('⚠️ id已存在: '+id,'warn');return}
+    ITEM_RECIPES.push({a,b,result:id,emoji,name,desc:desc||name,room:document.getElementById('rfRoom').value,x:42,y:45});
+  }else{
+    const job=document.getElementById('rfJobName').value.trim();
+    const emoji=document.getElementById('rfJobEmoji').value.trim()||'❔';
+    if(!job){showToast('⚠️ 岗位名必填','warn');return}
+    JOB_RECIPES.push({a,b,job,emoji,desc:desc||job});
+  }
+  rebuildDerived();renderCodex();renderRoom();
+  document.getElementById('recipeOverlay').classList.remove('show');
+  showToast('✅ 已添加'+(t==='synth'?'，新道具已放在房间中间，可拖动摆位':'')+'，记得导出数据');
+}
+
+// Touch swipe
+let _tx=0;
+document.querySelector('.room-container').addEventListener('touchstart',e=>{_tx=e.touches[0].clientX},{passive:true});
+document.querySelector('.room-container').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-_tx;if(!EDIT&&Math.abs(dx)>50){dx>0?prevRoom():nextRoom()}},{passive:true});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')prevRoom();if(e.key==='ArrowRight')nextRoom()});
+
+// ==================== INIT ====================
+if(!window.GAME_DATA){
+  document.body.innerHTML='<div style="padding:60px 30px;text-align:center;color:#f87171">⚠️ 未找到 data.js（GAME_DATA）<br><br><span style="color:#94a3b8;font-size:.85em">请确认 data.js 与 index.html 在同一目录</span></div>';
+}else{
+  load();initUnlocks();renderRoom();renderSlots();renderCodex();
+  if(EDIT)initEditMode();
+  const _errs=validateData();
+  if(_errs.length)console.warn('[数据校验] '+_errs.length+'个问题:',_errs);
+  if(DEBUG||(EDIT&&_errs.length))showValidation();
+}
+</script>
+</body>
+</html>
