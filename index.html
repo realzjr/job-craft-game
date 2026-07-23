@@ -193,6 +193,12 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;backgroun
 .codex-item.locked .ci-emoji{filter:grayscale(1)}
 
 /* ===== PLAIN SCENE (新房间默认底色) & EDIT MODE ===== */
+.ico{display:inline-block;line-height:1;vertical-align:middle}
+.ico img{width:1.15em;height:1.15em;object-fit:contain;display:block;margin:auto}
+.ico em{font-style:normal;display:none}
+.ico.noimg img{display:none}
+.ico.noimg em{display:inline}
+
 .scene-bg.plain{background:linear-gradient(180deg,#e5e7eb 0%,#d1d5db 54%,#9ca3af 54.5%,#6b7280 100%)}
 .edit-bar{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(124,58,237,.93);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px;font-size:.8em}
 .edit-bar button{padding:3px 10px;border:none;border-radius:6px;background:#fff;color:#7c3aed;font-size:.9em;cursor:pointer}
@@ -334,6 +340,18 @@ const EASTER_EGGS={};
 const GENERIC_FAILS=(D.genericFails&&D.genericFails.length)?D.genericFails:['合成失败，换个组合试试。'];
 const ROOM_DECOS=D.roomDecos||{};
 const SAVE_KEY='jc_'+(D.version||'v1');
+// 图片图标：useImages 开启后按约定路径找图，加载失败自动回退 emoji
+// 约定：assets/items/<道具id>.png  assets/jobs/<岗位名>.png  assets/rooms/<房间id>.png
+// 单条数据可用 img:'路径' 覆盖约定文件名
+const USE_IMG=!!D.useImages;
+const ASSET_BASE=D.assetBase||'assets/';
+function iconHTML(emoji,path){
+  if(!USE_IMG||!path)return emoji;
+  return `<span class="ico"><img src="${ASSET_BASE}${encodeURI(path)}" onerror="this.parentNode.classList.add('noimg')" draggable="false"><em>${emoji}</em></span>`;
+}
+const itemIcon=it=>iconHTML(it.emoji,it.img||('items/'+it.id+'.png'));
+const jobIcon=j=>iconHTML(j.emoji,j.img||('jobs/'+j.job+'.png'));
+const roomIcon=r=>iconHTML(r.emoji,r.img||('rooms/'+r.id+'.png'));
 
 // ==================== STATE ====================
 let S={currentRoom:0,revealed:[],discoveredItems:[],discoveredJobs:[],slots:[null,null],codexFilter:'all'};
@@ -364,7 +382,7 @@ function showToast(msg,type){
 // ==================== RENDER ====================
 function renderRoom(){
   const room=ROOMS[S.currentRoom];
-  document.getElementById('roomTitle').innerHTML=room.emoji+' '+room.name+' <span style="font-size:.72em;opacity:.5">🗺️</span>';
+  document.getElementById('roomTitle').innerHTML=roomIcon(room)+' '+room.name+' <span style="font-size:.72em;opacity:.5">🗺️</span>';
   document.getElementById('roomDots').innerHTML=ROOMS.map((_,i)=>{
     const r=ROOMS[i];const u=isUnlocked(r);
     let cls='room-dot';if(i===S.currentRoom)cls+=' active';if(!u)cls+=' locked';
@@ -383,15 +401,15 @@ function renderRoom(){
     const style=`top:${it.y}%;left:${it.x}%`+(it.w?`;width:${it.w}px`:'')+(it.h?`;height:${it.h}px`:'');
     const ef=(it.w||it.h)?` style="font-size:${(1.6*Math.min(it.w||60,it.h||60)/60).toFixed(2)}em"`:'';
     if(EDIT){
-      html+=`<div class="item-card revealed${it.isSynth?' synth-item':''}" data-id="${it.id}" style="${style}"><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span><span class="rz"></span></div>`;
+      html+=`<div class="item-card revealed${it.isSynth?' synth-item':''}" data-id="${it.id}" style="${style}"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span><span class="rz"></span></div>`;
     }else if(it.isSynth){
       const sel=S.slots.includes(it.id)?'selected':'';
-      html+=`<div class="item-card revealed synth-item ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+      html+=`<div class="item-card revealed synth-item ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span></div>`;
     }else if(!isRevealed(it.id)){
-      html+=`<div class="item-card hidden-item" style="${style}" onclick="revealItem('${it.id}',this)"><span class="discover-hint">❓</span><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+      html+=`<div class="item-card hidden-item" style="${style}" onclick="revealItem('${it.id}',this)"><span class="discover-hint">❓</span><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span></div>`;
     }else{
       const sel=S.slots.includes(it.id)?'selected':'';
-      html+=`<div class="item-card revealed ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${it.emoji}</span><span class="item-name">${it.name}</span></div>`;
+      html+=`<div class="item-card revealed ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span></div>`;
     }
   });
   html+=`</div>`;
@@ -413,7 +431,7 @@ function renderSlots(){
     if(S.slots[i]){
       const it=itemMap[S.slots[i]];
       el.className='c-slot filled';
-      el.innerHTML=`<span class="cs-emoji">${it.emoji}</span><span class="cs-name">${it.name}</span>`;
+      el.innerHTML=`<span class="cs-emoji">${itemIcon(it)}</span><span class="cs-name">${it.name}</span>`;
     }else{
       el.className='c-slot';
       el.innerHTML=`<span style="font-size:1em">${['①','②'][i]}</span>`;
@@ -431,13 +449,13 @@ function renderCodex(){
     `<button class="codex-tab ${S.codexFilter===t.id?'active':''}" onclick="setCodexFilter('${t.id}')">${t.l}</button>`
   ).join('')+(EDIT?`<button class="codex-tab" style="background:#22c55e;color:#fff;border-color:#22c55e" onclick="openRecipeForm()">➕ 添加公式</button>`:'');
   let items=[];const f=S.codexFilter;
-  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,name:it.name,locked:!EDIT&&!isRevealed(it.id),type:'base',data:it}));
-  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.name,locked:!EDIT&&!S.discoveredItems.includes(r.key),type:'synth',data:r}));
-  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.job,locked:!EDIT&&!S.discoveredJobs.includes(r.key),type:'job',data:r}));
+  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,icon:itemIcon(it),name:it.name,locked:!EDIT&&!isRevealed(it.id),type:'base',data:it}));
+  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:itemIcon(itemMap[r.result]),name:r.name,locked:!EDIT&&!S.discoveredItems.includes(r.key),type:'synth',data:r}));
+  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:jobIcon(r),name:r.job,locked:!EDIT&&!S.discoveredJobs.includes(r.key),type:'job',data:r}));
   window._cItems=items;
   document.getElementById('codexGrid').innerHTML=items.map((it,i)=>{
     const cls=it.locked?'codex-item locked':'codex-item';
-    const e=it.locked?'❓':it.emoji;const n=it.locked?'???':it.name;
+    const e=it.locked?'❓':it.icon;const n=it.locked?'???':it.name;
     const oc=it.locked?'':`onclick="showCodexDetail(${i})"`;
     const del=(EDIT&&(it.type==='synth'||it.type==='job'))?`<span class="del" onclick="event.stopPropagation();deleteRecipe('${it.type}','${it.data.key}')">✕</span>`:'';
     return`<div class="${cls}" ${oc}>${del}<span class="ci-emoji">${e}</span>${n}</div>`;
@@ -499,21 +517,21 @@ function doCraft(){
   if(ir){
     const isNew=!S.discoveredItems.includes(key);
     if(isNew){S.discoveredItems.push(key);save()}
-    const formula=itemMap[ir.a].emoji+itemMap[ir.a].name+' + '+itemMap[ir.b].emoji+itemMap[ir.b].name;
-    card.innerHTML=`<div class="p-emoji">${ir.emoji}</div><div class="p-title">${ir.name}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新物品合成！':'✅ 已合成过'}</div><div class="p-desc">${ir.desc}</div><button onclick="closeOv()">继续</button>`;
+    const formula=itemIcon(itemMap[ir.a])+itemMap[ir.a].name+' + '+itemIcon(itemMap[ir.b])+itemMap[ir.b].name;
+    card.innerHTML=`<div class="p-emoji">${itemIcon(itemMap[ir.result])}</div><div class="p-title">${ir.name}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新物品合成！':'✅ 已合成过'}</div><div class="p-desc">${ir.desc}</div><button onclick="closeOv()">继续</button>`;
     ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();renderCodex();checkUnlocks();return;
   }
   const jr=jobRecipeLookup[key];
   if(jr){
     const isNew=!S.discoveredJobs.includes(key);
     if(isNew){S.discoveredJobs.push(key);save()}
-    const formula=itemMap[jr.a].emoji+itemMap[jr.a].name+' + '+itemMap[jr.b].emoji+itemMap[jr.b].name;
-    card.innerHTML=`<div class="p-emoji">${jr.emoji}</div><div class="p-title">${jr.job}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新岗位解锁！':'✅ 已解锁过'}</div><div class="p-desc">${jr.desc.replace(/\n/g,'<br>')}</div><button onclick="closeOv()">继续</button>`;
+    const formula=itemIcon(itemMap[jr.a])+itemMap[jr.a].name+' + '+itemIcon(itemMap[jr.b])+itemMap[jr.b].name;
+    card.innerHTML=`<div class="p-emoji">${jobIcon(jr)}</div><div class="p-title">${jr.job}</div><div class="p-formula">${formula}</div><div class="p-tag ${isNew?'new':'dup'}">${isNew?'🎉 新岗位解锁！':'✅ 已解锁过'}</div><div class="p-desc">${jr.desc.replace(/\n/g,'<br>')}</div><button onclick="closeOv()">继续</button>`;
     ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();renderCodex();checkUnlocks();return;
   }
   const egg=EASTER_EGGS[key];
   const failMsg=egg||GENERIC_FAILS[Math.floor(Math.random()*GENERIC_FAILS.length)];
-  card.innerHTML=`<div class="p-emoji">${egg?'🥚':'💨'}</div><div class="p-fail">${egg?'彩蛋！':'合成失败'}</div><div class="p-formula">${itemMap[a].emoji} + ${itemMap[b].emoji}</div><div class="p-egg">${failMsg}</div><button onclick="closeOv()">再试试</button>`;
+  card.innerHTML=`<div class="p-emoji">${egg?'🥚':'💨'}</div><div class="p-fail">${egg?'彩蛋！':'合成失败'}</div><div class="p-formula">${itemIcon(itemMap[a])} + ${itemIcon(itemMap[b])}</div><div class="p-egg">${failMsg}</div><button onclick="closeOv()">再试试</button>`;
   ov.classList.add('show');S.slots=[null,null];renderRoom();renderSlots();
 }
 
@@ -536,8 +554,8 @@ function showHint(){
   let hint='';
   const possI=ITEM_RECIPES.filter(r=>!S.discoveredItems.includes(r.key)&&owned.includes(r.a)&&owned.includes(r.b));
   const possJ=JOB_RECIPES.filter(r=>!S.discoveredJobs.includes(r.key)&&owned.includes(r.a)&&owned.includes(r.b));
-  if(possI.length>0){const r=possI[Math.floor(Math.random()*possI.length)];hint=`试试把 ${itemMap[r.a].emoji}${itemMap[r.a].name} 和 ${itemMap[r.b].emoji}${itemMap[r.b].name} 放在一起……`}
-  else if(possJ.length>0){const r=possJ[Math.floor(Math.random()*possJ.length)];const h=[`试试 ${itemMap[r.a].emoji} 和 ${itemMap[r.b].emoji} 组合……`,`有个岗位叫「${r.job}」，猜猜需要什么？`,`${itemMap[r.a].emoji} 和某样东西能合出一个岗位……`];hint=h[Math.floor(Math.random()*h.length)]}
+  if(possI.length>0){const r=possI[Math.floor(Math.random()*possI.length)];hint=`试试把 ${itemIcon(itemMap[r.a])}${itemMap[r.a].name} 和 ${itemIcon(itemMap[r.b])}${itemMap[r.b].name} 放在一起……`}
+  else if(possJ.length>0){const r=possJ[Math.floor(Math.random()*possJ.length)];const h=[`试试 ${itemIcon(itemMap[r.a])} 和 ${itemIcon(itemMap[r.b])} 组合……`,`有个岗位叫「${r.job}」，猜猜需要什么？`,`${itemIcon(itemMap[r.a])} 和某样东西能合出一个岗位……`];hint=h[Math.floor(Math.random()*h.length)]}
   else if(owned.length<ALL_ITEMS.length){
     const unrev=BASE_ITEMS.filter(i=>!isRevealed(i.id)&&isUnlocked(ROOMS.find(r=>r.id===i.room)));
     if(unrev.length>0)hint='还有物品没发现，多点点房间里的问号！';
@@ -571,7 +589,7 @@ function renderMap(){
     if(r.entrance)cls+=' entrance';
     const span=(row.length===1&&cols>1)?' style="grid-column:1/-1"':'';
     const inner=u
-      ?`<span class="mr-emoji">${r.emoji}</span><span class="mr-name">${r.name}</span><span class="mr-count">物品 ${found}/${base.length+syn.length}</span>`
+      ?`<span class="mr-emoji">${roomIcon(r)}</span><span class="mr-name">${r.name}</span><span class="mr-count">物品 ${found}/${base.length+syn.length}</span>`
       :`<span class="mr-emoji">🔒</span><span class="mr-name">${r.name}</span><span class="mr-count">${r.unlockText||''}</span>`;
     return`<div class="${cls}"${span} onclick="mapGoto(${idx})">${inner}<span class="map-door"></span></div>`;
   }).join('')).join('');
@@ -589,9 +607,9 @@ function showCodexDetail(idx){
   const ov=document.getElementById('detailOverlay'),card=document.getElementById('detailCard');
   let formula='',desc='';
   if(it.type==='base'){const rm=ROOMS.find(r=>r.id===it.data.room);desc='来自：'+(rm?rm.emoji+' '+rm.name:'未知')}
-  else if(it.type==='synth'){formula=itemMap[it.data.a].emoji+itemMap[it.data.a].name+' + '+itemMap[it.data.b].emoji+itemMap[it.data.b].name;desc=it.data.desc}
-  else if(it.type==='job'){formula=itemMap[it.data.a].emoji+itemMap[it.data.a].name+' + '+itemMap[it.data.b].emoji+itemMap[it.data.b].name;desc=it.data.desc.replace(/\n/g,'<br>')}
-  card.innerHTML=`<div class="p-emoji">${it.emoji}</div><div class="p-title">${it.name}</div>${formula?`<div class="p-formula">${formula}</div>`:''}<div class="p-desc">${desc}</div><button onclick="closeOv2()">关闭</button>`;
+  else if(it.type==='synth'){formula=itemIcon(itemMap[it.data.a])+itemMap[it.data.a].name+' + '+itemIcon(itemMap[it.data.b])+itemMap[it.data.b].name;desc=it.data.desc}
+  else if(it.type==='job'){formula=itemIcon(itemMap[it.data.a])+itemMap[it.data.a].name+' + '+itemIcon(itemMap[it.data.b])+itemMap[it.data.b].name;desc=it.data.desc.replace(/\n/g,'<br>')}
+  card.innerHTML=`<div class="p-emoji">${it.icon}</div><div class="p-title">${it.name}</div>${formula?`<div class="p-formula">${formula}</div>`:''}<div class="p-desc">${desc}</div><button onclick="closeOv2()">关闭</button>`;
   ov.classList.add('show');
   document.getElementById('codexOverlay').classList.remove('show');
 }

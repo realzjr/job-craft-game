@@ -10,6 +10,17 @@ window.GAME_DATA={
 // 存档版本号：整套换内容时必须改（比如 v23），玩家旧存档会自动作废
 version:'v22',
 
+// ---------- 图片图标开关 ----------
+// 把 useImages 改成 true 后，游戏会按以下约定自动加载图片，缺图的自动显示 emoji：
+//   assets/items/<道具id>.png   （如 assets/items/keyboard.png）
+//   assets/jobs/<岗位名>.png    （如 assets/jobs/会计.png）
+//   assets/rooms/<房间id>.png   （如 assets/rooms/front.png）
+// 需要的完整文件名清单见 assets/MANIFEST.md
+// 个别条目想用别的文件名：给该条数据加 img:'items/xxx.png' 即可覆盖约定
+useImages:false,
+assetBase:'assets/',
+
+
 // ---------- 房间 ----------
 // id: 唯一英文标识  name/emoji: 显示  unlockAt: 需要合成多少个岗位才解锁(0=默认开放)
 // unlockText: 未解锁时的提示  scene: 场景主题CSS(front/admin/lab/market/boss，新房间可先用'plain')
