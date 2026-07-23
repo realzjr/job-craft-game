@@ -186,7 +186,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;backgroun
 .codex-progress{height:3px;background:#334155;border-radius:2px;overflow:hidden;margin-bottom:10px}
 .codex-progress-fill{height:100%;background:linear-gradient(90deg,#818cf8,#c084fc);transition:width .5s ease}
 .codex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;overflow-y:auto;flex:1;padding-right:4px}
-.codex-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;background:#0f172a;border:1px solid #334155;border-radius:8px;font-size:.68em;color:#94a3b8;text-align:center;cursor:pointer;transition:all .2s}
+.codex-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;background:#0f172a;border:1px solid #334155;border-radius:8px;font-size:.68em;color:#94a3b8;text-align:center;cursor:pointer;transition:all .2s}
 .codex-item:hover{border-color:#818cf8}
 .codex-item .ci-emoji{font-size:1.5em}
 .codex-item.locked{opacity:.3}
@@ -200,6 +200,11 @@ body.editing .room-nav{margin-top:30px}
 body.editing .item-card{cursor:grab;touch-action:none}
 .item-card .rz{display:none}
 body.editing .item-card .rz{display:block;position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;background:#7c3aed;border:2px solid #fff;border-radius:4px;cursor:nwse-resize;touch-action:none;z-index:3}
+.rf-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.rf-row label{width:72px;font-size:.78em;color:#94a3b8;flex-shrink:0}
+.rf-row input,.rf-row select{flex:1;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#e2e8f0;padding:6px 8px;font-size:.85em;min-width:0}
+.codex-item .del{display:none;position:absolute;top:-5px;right:-5px;width:16px;height:16px;background:#ef4444;color:#fff;border-radius:50%;font-size:10px;line-height:16px;text-align:center;z-index:2;cursor:pointer}
+body.editing .codex-item .del{display:block}
 .export-ta{width:100%;height:180px;background:#0f172a;color:#a5b4fc;border:1px solid #475569;border-radius:8px;font-size:.65em;font-family:monospace;padding:8px;margin-bottom:10px}
 
 /* ===== COMPANY MAP ===== */
@@ -297,6 +302,7 @@ body.editing .item-card .rz{display:block;position:absolute;right:-7px;bottom:-7
   </div>
 </div>
 
+<div class="overlay" id="recipeOverlay" onclick="closeOverlay(event)"><div class="popup" id="recipeCard" onclick="event.stopPropagation()" style="text-align:left;max-height:85vh;overflow-y:auto"></div></div>
 <div class="overlay" id="resultOverlay" onclick="closeOverlay(event)"><div class="popup" id="resultCard"></div></div>
 <div class="overlay" id="detailOverlay" onclick="closeOverlay(event)"><div class="popup" id="detailCard"></div></div>
 <div class="toast" id="toast"></div>
@@ -312,19 +318,21 @@ const EDIT=Q.has('edit'),DEBUG=Q.has('debug');
 const ROOMS=D.rooms||[];
 const BASE_ITEMS=D.baseItems||[];
 const ITEM_RECIPES=D.itemRecipes||[];
-const SYNTH_ITEMS=ITEM_RECIPES.map(r=>({id:r.result,emoji:r.emoji,name:r.name,room:r.room,isSynth:true,x:r.x,y:r.y}));
-const ALL_ITEMS=[...BASE_ITEMS,...SYNTH_ITEMS];
-const itemMap={};ALL_ITEMS.forEach(i=>itemMap[i.id]=i);
-const itemRecipeLookup={};
-ITEM_RECIPES.forEach(r=>{const k=[r.a,r.b].sort().join('+');r.key=k;itemRecipeLookup[k]=r});
 const JOB_RECIPES=D.jobRecipes||[];
-const jobRecipeLookup={};
-JOB_RECIPES.forEach(r=>{r.key=[r.a,r.b].sort().join('+');jobRecipeLookup[r.key]=r});
+let SYNTH_ITEMS,ALL_ITEMS,itemMap,itemRecipeLookup,jobRecipeLookup,TOTAL;
+function rebuildDerived(){
+  SYNTH_ITEMS=ITEM_RECIPES.map(r=>({id:r.result,emoji:r.emoji,name:r.name,room:r.room,isSynth:true,x:r.x,y:r.y,w:r.w,h:r.h}));
+  ALL_ITEMS=[...BASE_ITEMS,...SYNTH_ITEMS];
+  itemMap={};ALL_ITEMS.forEach(i=>itemMap[i.id]=i);
+  itemRecipeLookup={};ITEM_RECIPES.forEach(r=>{const k=[r.a,r.b].sort().join('+');r.key=k;itemRecipeLookup[k]=r});
+  jobRecipeLookup={};JOB_RECIPES.forEach(r=>{r.key=[r.a,r.b].sort().join('+');jobRecipeLookup[r.key]=r});
+  TOTAL=ITEM_RECIPES.length+JOB_RECIPES.length;
+}
+rebuildDerived();
 const EASTER_EGGS={};
 (D.easterEggs||[]).forEach(([a,b,msg])=>{EASTER_EGGS[[a,b].sort().join('+')]=msg});
 const GENERIC_FAILS=(D.genericFails&&D.genericFails.length)?D.genericFails:['合成失败，换个组合试试。'];
 const ROOM_DECOS=D.roomDecos||{};
-const TOTAL=ITEM_RECIPES.length+JOB_RECIPES.length;
 const SAVE_KEY='jc_'+(D.version||'v1');
 
 // ==================== STATE ====================
@@ -421,17 +429,18 @@ function renderCodex(){
   const tabs=[{id:'all',l:'全部'},{id:'base',l:'基础物品'},{id:'synth',l:'合成物品'},{id:'job',l:'岗位'}];
   document.getElementById('codexTabs').innerHTML=tabs.map(t=>
     `<button class="codex-tab ${S.codexFilter===t.id?'active':''}" onclick="setCodexFilter('${t.id}')">${t.l}</button>`
-  ).join('');
+  ).join('')+(EDIT?`<button class="codex-tab" style="background:#22c55e;color:#fff;border-color:#22c55e" onclick="openRecipeForm()">➕ 添加公式</button>`:'');
   let items=[];const f=S.codexFilter;
-  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,name:it.name,locked:!isRevealed(it.id),type:'base',data:it}));
-  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.name,locked:!S.discoveredItems.includes(r.key),type:'synth',data:r}));
-  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.job,locked:!S.discoveredJobs.includes(r.key),type:'job',data:r}));
+  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,name:it.name,locked:!EDIT&&!isRevealed(it.id),type:'base',data:it}));
+  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.name,locked:!EDIT&&!S.discoveredItems.includes(r.key),type:'synth',data:r}));
+  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,name:r.job,locked:!EDIT&&!S.discoveredJobs.includes(r.key),type:'job',data:r}));
   window._cItems=items;
   document.getElementById('codexGrid').innerHTML=items.map((it,i)=>{
     const cls=it.locked?'codex-item locked':'codex-item';
     const e=it.locked?'❓':it.emoji;const n=it.locked?'???':it.name;
     const oc=it.locked?'':`onclick="showCodexDetail(${i})"`;
-    return`<div class="${cls}" ${oc}><span class="ci-emoji">${e}</span>${n}</div>`;
+    const del=(EDIT&&(it.type==='synth'||it.type==='job'))?`<span class="del" onclick="event.stopPropagation();deleteRecipe('${it.type}','${it.data.key}')">✕</span>`:'';
+    return`<div class="${cls}" ${oc}>${del}<span class="ci-emoji">${e}</span>${n}</div>`;
   }).join('');
 }
 
@@ -647,9 +656,10 @@ function editDrag(e,el){
 }
 function editExport(){
   const strip=r=>({a:r.a,b:r.b,result:r.result,emoji:r.emoji,name:r.name,desc:r.desc,room:r.room,x:r.x,y:r.y,w:r.w,h:r.h});
-  const out='// 拖动后的最新坐标，粘贴回 data.js 替换对应数组\nbaseItems:'+JSON.stringify(BASE_ITEMS)+',\n\nitemRecipes:'+JSON.stringify(ITEM_RECIPES.map(strip))+',';
+  const stripJ=r=>({a:r.a,b:r.b,job:r.job,emoji:r.emoji,desc:r.desc});
+  const out='// 编辑后的最新数据，粘贴回 data.js 替换对应数组\nbaseItems:'+JSON.stringify(BASE_ITEMS)+',\n\nitemRecipes:'+JSON.stringify(ITEM_RECIPES.map(strip))+',\n\njobRecipes:'+JSON.stringify(JOB_RECIPES.map(stripJ))+',';
   const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
-  card.innerHTML=`<div class="p-title">导出坐标数据</div><div class="p-desc">包含拖动后的最新坐标，复制后替换 data.js 中的 baseItems / itemRecipes</div><textarea class="export-ta" id="exportTa"></textarea><button onclick="navigator.clipboard.writeText(document.getElementById('exportTa').value).then(()=>showToast('已复制'))">复制</button> <button onclick="closeOv()">关闭</button>`;
+  card.innerHTML=`<div class="p-title">导出坐标数据</div><div class="p-desc">包含拖动后的最新坐标，复制后替换 data.js 中的 baseItems / itemRecipes / jobRecipes</div><textarea class="export-ta" id="exportTa"></textarea><button onclick="navigator.clipboard.writeText(document.getElementById('exportTa').value).then(()=>showToast('已复制'))">复制</button> <button onclick="closeOv()">关闭</button>`;
   document.getElementById('exportTa').value=out;
   ov.classList.add('show');
 }
@@ -689,6 +699,77 @@ function showValidation(){
   const ov=document.getElementById('resultOverlay'),card=document.getElementById('resultCard');
   card.innerHTML=`<div class="p-emoji">${errs.length?'⚠️':'✅'}</div><div class="p-title">数据校验</div><div class="p-desc" style="text-align:left;max-height:50vh;overflow-y:auto">${errs.length?errs.map(e=>'· '+e).join('<br>'):'全部通过：'+ROOMS.length+'个房间 / '+BASE_ITEMS.length+'个基础道具 / '+ITEM_RECIPES.length+'个物品配方 / '+JOB_RECIPES.length+'个岗位 / '+Object.keys(EASTER_EGGS).length+'个彩蛋'}</div><button onclick="closeOv()">知道了</button>`;
   ov.classList.add('show');
+}
+
+
+// ==================== RECIPE ADD / DELETE (edit mode) ====================
+function deleteRecipe(type,key){
+  if(type==='synth'){
+    const r=ITEM_RECIPES.find(x=>x.key===key);if(!r)return;
+    const deps=[...ITEM_RECIPES.filter(x=>x!==r&&(x.a===r.result||x.b===r.result)),
+                ...JOB_RECIPES.filter(x=>x.a===r.result||x.b===r.result)];
+    if(deps.length){showToast('⚠️ 先删依赖['+r.name+']的: '+deps.slice(0,3).map(d=>d.name||d.job).join('、')+(deps.length>3?' 等'+deps.length+'条':''),'warn');return}
+    if(!confirm('删除物品配方 ['+r.name+'] ？'))return;
+    ITEM_RECIPES.splice(ITEM_RECIPES.indexOf(r),1);
+  }else{
+    const r=JOB_RECIPES.find(x=>x.key===key);if(!r)return;
+    if(!confirm('删除岗位 ['+r.job+'] ？'))return;
+    JOB_RECIPES.splice(JOB_RECIPES.indexOf(r),1);
+  }
+  rebuildDerived();renderCodex();renderRoom();showToast('已删除，记得点"导出数据"保存');
+}
+function openRecipeForm(){
+  const opts=ALL_ITEMS.map(i=>`<option value="${i.id}">${i.emoji} ${i.name}${i.isSynth?'(合成)':''}</option>`).join('');
+  const rooms=ROOMS.map(r=>`<option value="${r.id}">${r.emoji} ${r.name}</option>`).join('');
+  const card=document.getElementById('recipeCard');
+  card.innerHTML=`<div class="p-title">➕ 添加公式</div>
+  <div class="rf-row"><label>类型</label><select id="rfType" onchange="rfToggle()"><option value="synth">物品配方（合成新道具）</option><option value="job">岗位配方（合成岗位）</option></select></div>
+  <div class="rf-row"><label>材料A</label><select id="rfA">${opts}</select></div>
+  <div class="rf-row"><label>材料B</label><select id="rfB">${opts}</select></div>
+  <div id="rfSynth">
+    <div class="rf-row"><label>新物品id</label><input id="rfId" placeholder="英文唯一，如 redbull"></div>
+    <div class="rf-row"><label>emoji</label><input id="rfEmoji" placeholder="🧃"></div>
+    <div class="rf-row"><label>名称</label><input id="rfName" placeholder="如 红牛"></div>
+    <div class="rf-row"><label>所在房间</label><select id="rfRoom">${rooms}</select></div>
+  </div>
+  <div id="rfJob" style="display:none">
+    <div class="rf-row"><label>岗位名</label><input id="rfJobName" placeholder="如 卷王"></div>
+    <div class="rf-row"><label>emoji</label><input id="rfJobEmoji" placeholder="🐮"></div>
+  </div>
+  <div class="rf-row"><label>描述</label><input id="rfDesc" placeholder="合成成功后的介绍文案"></div>
+  <div style="margin-top:14px;text-align:center"><button onclick="submitRecipe()">添加</button> <button style="background:#334155" onclick="document.getElementById('recipeOverlay').classList.remove('show')">取消</button></div>`;
+  document.getElementById('recipeOverlay').classList.add('show');
+}
+function rfToggle(){
+  const t=document.getElementById('rfType').value;
+  document.getElementById('rfSynth').style.display=t==='synth'?'':'none';
+  document.getElementById('rfJob').style.display=t==='job'?'':'none';
+}
+function submitRecipe(){
+  const t=document.getElementById('rfType').value;
+  const a=document.getElementById('rfA').value,b=document.getElementById('rfB').value;
+  if(a===b){showToast('⚠️ 两个材料不能相同','warn');return}
+  const key=[a,b].sort().join('+');
+  if(itemRecipeLookup[key]||jobRecipeLookup[key]){showToast('⚠️ 该组合已被其他公式占用','warn');return}
+  if(EASTER_EGGS[key]){showToast('⚠️ 该组合是彩蛋，请先在 data.js 删除','warn');return}
+  const desc=document.getElementById('rfDesc').value.trim();
+  if(t==='synth'){
+    const id=document.getElementById('rfId').value.trim();
+    const emoji=document.getElementById('rfEmoji').value.trim()||'❔';
+    const name=document.getElementById('rfName').value.trim();
+    if(!id||!name){showToast('⚠️ 物品id和名称必填','warn');return}
+    if(!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(id)){showToast('⚠️ id须为英文字母/数字/下划线','warn');return}
+    if(itemMap[id]){showToast('⚠️ id已存在: '+id,'warn');return}
+    ITEM_RECIPES.push({a,b,result:id,emoji,name,desc:desc||name,room:document.getElementById('rfRoom').value,x:42,y:45});
+  }else{
+    const job=document.getElementById('rfJobName').value.trim();
+    const emoji=document.getElementById('rfJobEmoji').value.trim()||'❔';
+    if(!job){showToast('⚠️ 岗位名必填','warn');return}
+    JOB_RECIPES.push({a,b,job,emoji,desc:desc||job});
+  }
+  rebuildDerived();renderCodex();renderRoom();
+  document.getElementById('recipeOverlay').classList.remove('show');
+  showToast('✅ 已添加'+(t==='synth'?'，新道具已放在房间中间，可拖动摆位':'')+'，记得导出数据');
 }
 
 // Touch swipe
