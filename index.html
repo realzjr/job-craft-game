@@ -204,6 +204,10 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;backgroun
 .edit-bar button{padding:3px 10px;border:none;border-radius:6px;background:#fff;color:#7c3aed;font-size:.9em;cursor:pointer}
 body.editing .room-nav{margin-top:30px}
 body.editing .item-card{cursor:grab;touch-action:none}
+.item-card .up,.codex-item .up,.map-room .up{display:none}
+body.editing .item-card .up{display:block;position:absolute;left:-8px;top:-8px;font-size:11px;background:#1e293b;border:1.5px solid #7c3aed;border-radius:50%;width:19px;height:19px;line-height:17px;text-align:center;cursor:pointer;z-index:3}
+body.editing .codex-item .up{display:block;position:absolute;top:-5px;left:-5px;font-size:9px;background:#1e293b;border:1px solid #7c3aed;border-radius:50%;width:16px;height:16px;line-height:14px;text-align:center;cursor:pointer;z-index:2}
+body.editing .map-room .up{display:block;position:absolute;top:4px;right:4px;font-size:13px;cursor:pointer}
 .item-card .rz{display:none}
 body.editing .item-card .rz{display:block;position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;background:#7c3aed;border:2px solid #fff;border-radius:4px;cursor:nwse-resize;touch-action:none;z-index:3}
 .rf-row{display:flex;align-items:center;gap:8px;margin-top:8px}
@@ -311,6 +315,7 @@ body.editing .codex-item .del{display:block}
 <div class="overlay" id="recipeOverlay" onclick="closeOverlay(event)"><div class="popup" id="recipeCard" onclick="event.stopPropagation()" style="text-align:left;max-height:85vh;overflow-y:auto"></div></div>
 <div class="overlay" id="resultOverlay" onclick="closeOverlay(event)"><div class="popup" id="resultCard"></div></div>
 <div class="overlay" id="detailOverlay" onclick="closeOverlay(event)"><div class="popup" id="detailCard"></div></div>
+<input type="file" id="upInput" accept="image/*" style="display:none" onchange="if(this.files[0])_doUpload(this.files[0]);this.value=''">
 <div class="toast" id="toast"></div>
 
 <script src="data.js"></script>
@@ -343,11 +348,11 @@ const SAVE_KEY='jc_'+(D.version||'v1');
 // 图片图标：useImages 开启后按约定路径找图，加载失败自动回退 emoji
 // 约定：assets/items/<道具id>.png  assets/jobs/<岗位名>.png  assets/rooms/<房间id>.png
 // 单条数据可用 img:'路径' 覆盖约定文件名
-const USE_IMG=!!D.useImages;
+let USE_IMG=!!D.useImages;let _imgVer=0;
 const ASSET_BASE=D.assetBase||'assets/';
 function iconHTML(emoji,path){
   if(!USE_IMG||!path)return emoji;
-  return `<span class="ico"><img src="${ASSET_BASE}${encodeURI(path)}" onerror="this.parentNode.classList.add('noimg')" draggable="false"><em>${emoji}</em></span>`;
+  return `<span class="ico"><img src="${ASSET_BASE}${encodeURI(path)}${_imgVer?'?v='+_imgVer:''}" onerror="this.parentNode.classList.add('noimg')" draggable="false"><em>${emoji}</em></span>`;
 }
 const itemIcon=it=>iconHTML(it.emoji,it.img||('items/'+it.id+'.png'));
 const jobIcon=j=>iconHTML(j.emoji,j.img||('jobs/'+j.job+'.png'));
@@ -401,7 +406,7 @@ function renderRoom(){
     const style=`top:${it.y}%;left:${it.x}%`+(it.w?`;width:${it.w}px`:'')+(it.h?`;height:${it.h}px`:'');
     const ef=(it.w||it.h)?` style="font-size:${(1.6*Math.min(it.w||60,it.h||60)/60).toFixed(2)}em"`:'';
     if(EDIT){
-      html+=`<div class="item-card revealed${it.isSynth?' synth-item':''}" data-id="${it.id}" style="${style}"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span><span class="rz"></span></div>`;
+      html+=`<div class="item-card revealed${it.isSynth?' synth-item':''}" data-id="${it.id}" style="${style}"><span class="up" onclick="event.stopPropagation();pickImage('items/${it.id}.png','${it.name}')">📷</span><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span><span class="rz"></span></div>`;
     }else if(it.isSynth){
       const sel=S.slots.includes(it.id)?'selected':'';
       html+=`<div class="item-card revealed synth-item ${sel}" style="${style}" onclick="toggleSelect('${it.id}')"><span class="item-emoji"${ef}>${itemIcon(it)}</span><span class="item-name">${it.name}</span></div>`;
@@ -449,16 +454,17 @@ function renderCodex(){
     `<button class="codex-tab ${S.codexFilter===t.id?'active':''}" onclick="setCodexFilter('${t.id}')">${t.l}</button>`
   ).join('')+(EDIT?`<button class="codex-tab" style="background:#22c55e;color:#fff;border-color:#22c55e" onclick="openRecipeForm()">➕ 添加公式</button>`:'');
   let items=[];const f=S.codexFilter;
-  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,icon:itemIcon(it),name:it.name,locked:!EDIT&&!isRevealed(it.id),type:'base',data:it}));
-  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:itemIcon(itemMap[r.result]),name:r.name,locked:!EDIT&&!S.discoveredItems.includes(r.key),type:'synth',data:r}));
-  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:jobIcon(r),name:r.job,locked:!EDIT&&!S.discoveredJobs.includes(r.key),type:'job',data:r}));
+  if(f==='all'||f==='base')BASE_ITEMS.forEach(it=>items.push({emoji:it.emoji,icon:itemIcon(it),up:'items/'+it.id+'.png',name:it.name,locked:!EDIT&&!isRevealed(it.id),type:'base',data:it}));
+  if(f==='all'||f==='synth')ITEM_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:itemIcon(itemMap[r.result]),up:'items/'+r.result+'.png',name:r.name,locked:!EDIT&&!S.discoveredItems.includes(r.key),type:'synth',data:r}));
+  if(f==='all'||f==='job')JOB_RECIPES.forEach(r=>items.push({emoji:r.emoji,icon:jobIcon(r),up:'jobs/'+r.job+'.png',name:r.job,locked:!EDIT&&!S.discoveredJobs.includes(r.key),type:'job',data:r}));
   window._cItems=items;
   document.getElementById('codexGrid').innerHTML=items.map((it,i)=>{
     const cls=it.locked?'codex-item locked':'codex-item';
     const e=it.locked?'❓':it.icon;const n=it.locked?'???':it.name;
     const oc=it.locked?'':`onclick="showCodexDetail(${i})"`;
     const del=(EDIT&&(it.type==='synth'||it.type==='job'))?`<span class="del" onclick="event.stopPropagation();deleteRecipe('${it.type}','${it.data.key}')">✕</span>`:'';
-    return`<div class="${cls}" ${oc}>${del}<span class="ci-emoji">${e}</span>${n}</div>`;
+    const up=EDIT?`<span class="up" onclick="event.stopPropagation();pickImage('${it.up}','${it.name}')">📷</span>`:'';
+    return`<div class="${cls}" ${oc}>${up}${del}<span class="ci-emoji">${e}</span>${n}</div>`;
   }).join('');
 }
 
@@ -591,7 +597,8 @@ function renderMap(){
     const inner=u
       ?`<span class="mr-emoji">${roomIcon(r)}</span><span class="mr-name">${r.name}</span><span class="mr-count">物品 ${found}/${base.length+syn.length}</span>`
       :`<span class="mr-emoji">🔒</span><span class="mr-name">${r.name}</span><span class="mr-count">${r.unlockText||''}</span>`;
-    return`<div class="${cls}"${span} onclick="mapGoto(${idx})">${inner}<span class="map-door"></span></div>`;
+    const mup=EDIT?`<span class="up" onclick="event.stopPropagation();pickImage('rooms/${r.id}.png','${r.name}')">📷</span>`:'';
+    return`<div class="${cls}"${span} onclick="mapGoto(${idx})">${mup}${inner}<span class="map-door"></span></div>`;
   }).join('')).join('');
 }
 function mapGoto(idx){
@@ -633,6 +640,7 @@ function editDrag(e,el){
   const scene=document.getElementById('roomScene');if(!scene)return;
   const rect=scene.getBoundingClientRect();
   const id=el.dataset.id;
+  if(e.target.classList.contains('up'))return;
   const isResize=e.target.classList.contains('rz');
   el.setPointerCapture(e.pointerId);
   const sx=e.clientX,sy=e.clientY,sw=el.offsetWidth,sh=el.offsetHeight;
@@ -788,6 +796,43 @@ function submitRecipe(){
   rebuildDerived();renderCodex();renderRoom();
   document.getElementById('recipeOverlay').classList.remove('show');
   showToast('✅ 已添加'+(t==='synth'?'，新道具已放在房间中间，可拖动摆位':'')+'，记得导出数据');
+}
+
+// ==================== IMAGE UPLOAD (edit mode) ====================
+let _upTarget=null;
+function pickImage(path,label){
+  _upTarget={path,label};
+  document.getElementById('upInput').click();
+}
+function toPng256(file){
+  return new Promise((ok,err)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const m=Math.max(img.width,img.height)||1;
+      const sc=Math.min(1,256/m);
+      const w=Math.max(1,Math.round(img.width*sc)),h=Math.max(1,Math.round(img.height*sc));
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(img.src);
+      c.toBlob(b=>b?ok(b):err(new Error('转码失败')),'image/png');
+    };
+    img.onerror=()=>{URL.revokeObjectURL(img.src);err(new Error('无法读取图片'))};
+    img.src=URL.createObjectURL(file);
+  });
+}
+async function _doUpload(file){
+  if(!_upTarget)return;
+  const {path,label}=_upTarget;_upTarget=null;
+  try{
+    const png=await toPng256(file);
+    const res=await fetch('upload?path='+encodeURIComponent(path),{method:'POST',body:png});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    USE_IMG=true;D.useImages=true;_imgVer++;
+    renderRoom();renderSlots();renderCodex();
+    showToast('✅ 已上传 '+label+' 的图标');
+  }catch(e){
+    showToast('⚠️ 上传失败：请用 python3 devserver.py 启动本地服务器','warn');
+  }
 }
 
 // Touch swipe
